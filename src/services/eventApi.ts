@@ -1,11 +1,13 @@
 import { apiBase } from './apiBase';
-import type { EventItem, EventStats, CampaignPerformance } from '@types/index';
+
+
+import type { EventItem, EventStats, CampaignPerformance } from '@types';
 
 export const eventApi = apiBase.injectEndpoints({
   endpoints: (build) => ({
-    // Recent events
-    listEvents: build.query<EventItem[], void>({
-      query: () => '/events/recent',
+    
+    listEvents: build.query<EventItem[], { page: number; pageSize: number }>({
+      query: ({ page, pageSize }) => `/events/recent?page=${page}&pageSize=${pageSize}`,
       providesTags: (result) =>
         result
           ? [
@@ -15,13 +17,13 @@ export const eventApi = apiBase.injectEndpoints({
           : [{ type: 'Event', id: 'LIST' }],
     }),
 
-    // Stats (overview KPIs)
+    // Stats (overview KPIs) 
     getEventStats: build.query<EventStats, void>({
       query: () => '/events/stats',
       providesTags: [{ type: 'Stats', id: 'AGG' }],
     }),
 
-    // Campaign performance
+    // Campaign performance - works now because apiBase has "Campaign" in tagTypes
     getCampaignPerformance: build.query<CampaignPerformance[], void>({
       query: () => '/events/campaigns',
       providesTags: [{ type: 'Campaign', id: 'LIST' }],

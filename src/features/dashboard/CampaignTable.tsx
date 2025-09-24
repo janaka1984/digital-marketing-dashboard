@@ -1,6 +1,6 @@
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box } from '@mui/material';
-import type { CampaignPerformance } from '@types/index';
+import type { CampaignPerformance } from '@types';
 
 type Props = {
   rows: CampaignPerformance[];

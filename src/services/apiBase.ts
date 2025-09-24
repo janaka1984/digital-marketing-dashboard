@@ -12,6 +12,6 @@ export const apiBase = createApi({
       return headers;
     }
   }),
-  tagTypes: ['Event', 'Stats'],
+  tagTypes: ['Event', 'Stats','Campaign'],
   endpoints: () => ({})
 });

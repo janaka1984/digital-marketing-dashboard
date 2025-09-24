@@ -16,6 +16,7 @@
       "@components/*": ["src/components/*"],
       "@features/*": ["src/features/*"],
       "@utils/*": ["src/utils/*"],
+      "@types": ["src/types/index.ts"],
       "@types/*": ["src/types/*"]
     },
     "types": ["node", "vite/client"],
