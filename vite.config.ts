@@ -6,5 +6,8 @@ export default defineConfig({
   plugins: [react(),
     tsconfigPaths()],
   server: { port: 3000 },
-  preview: { port: 4173 }
+  preview: { port: 4173 },
+  build: {
+    outDir: 'build', // force Vite to output into build/
+  },
 });
