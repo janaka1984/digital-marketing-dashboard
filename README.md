@@ -3,7 +3,7 @@
 ## Quick start
 ```bash
 cp .env.example .env
-# set VITE_API_BASE_URL to your Django base (e.g., http://localhost:8000)
+# set VITE_API_BASE_URL to your Django base (e.g., https://pixelapi.galaxors.com)
 corepack enable
 pnpm i || yarn || npm i
 pnpm dev || yarn dev || npm run dev
