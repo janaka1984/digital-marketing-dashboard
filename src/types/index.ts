@@ -2,8 +2,11 @@ export type EventItem = {
   id: number | string;
   event_name: string;
   event_time: number; // epoch seconds
-  event_source_url?: string;
-  user_data?: Record<string, unknown>;
+  event_source_url?: string | null;  
+  user_data?: {
+    client_ip_address?: string;
+    client_user_agent?: string;
+  };  
   custom_data?: Record<string, unknown>;
 };
 

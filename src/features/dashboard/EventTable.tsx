@@ -15,13 +15,14 @@ export default function EventTable() {
             <TableCell>Time</TableCell>
             <TableCell>Name</TableCell>
             <TableCell>Source URL</TableCell>
-            <TableCell>User Data</TableCell>
+            <TableCell>Client IP</TableCell>
+            <TableCell>User Agent</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {data?.map((e) => (
             <TableRow key={e.id}>
-              <TableCell>{dayjs.unix(e.event_time).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
+              <TableCell>{dayjs(e.event_time).format('YYYY-MM-DD HH:mm:ss')}</TableCell>
               <TableCell>
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <Chip size="small" label={e.event_name} />
@@ -30,10 +31,9 @@ export default function EventTable() {
               <TableCell sx={{ maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {e.event_source_url || '-'}
               </TableCell>
-              <TableCell>
-                <Typography variant="caption" color="text.secondary">
-                  {e.user_data ? JSON.stringify(e.user_data).slice(0, 80) + '…' : '-'}
-                </Typography>
+              <TableCell>{e.user_data?.client_ip_address || '-'}</TableCell>
+              <TableCell sx={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {e.user_data?.client_user_agent || '-'}
               </TableCell>
             </TableRow>
           ))}
