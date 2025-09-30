@@ -1,5 +1,6 @@
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+// src/features/dashboard/CampaignTable.tsx
 import { Box } from '@mui/material';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import type { CampaignPerformance } from '@types';
 
 type Props = {

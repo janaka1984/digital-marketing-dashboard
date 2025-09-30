@@ -11,12 +11,14 @@ import { ColorModeProvider } from '@theme/useColorMode';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>
-      <ColorModeProvider>
-        <CssBaseline />
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </ColorModeProvider>
+      <ThemeProvider theme={theme}>
+        <ColorModeProvider>
+          <CssBaseline />
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ColorModeProvider>
+      </ThemeProvider>
     </Provider>
   </React.StrictMode>
 );

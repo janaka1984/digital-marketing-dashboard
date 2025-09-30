@@ -1,4 +1,15 @@
-import { Box, Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+// src/features/dashboard/EventTable.tsx
+import {
+  Box,
+  Chip,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
 import dayjs from 'dayjs';
 import { useListEventsQuery } from '@services/eventApi';
 
@@ -39,7 +50,9 @@ export default function EventTable() {
           ))}
           {isFetching && (
             <TableRow>
-              <TableCell colSpan={4}><Typography variant="body2">Loading…</Typography></TableCell>
+              <TableCell colSpan={5}>
+                <Typography variant="body2">Loading…</Typography>
+              </TableCell>
             </TableRow>
           )}
         </TableBody>

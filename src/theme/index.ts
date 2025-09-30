@@ -1,56 +1,44 @@
+// src/theme/index.ts
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
-
-const BORDER_COLOR = '#3f51b5'; // indigo 500 — fixed color
-// const BG_COLOR = '#ffffff';     // you can change to '#f3e5f5' for magenta tint
 
 let theme = createTheme({
   palette: {
-    mode: 'light', // 👈 even if you toggle dark mode, overrides will win
-    primary: { main: '#3f51b5' },
-    secondary: { main: '#e91e63' },
+    mode: 'light',
+    primary: { main: '#2065D1' }, // blue
+    secondary: { main: '#3366FF' },
     background: {
-      default: '#f8f9fa',
-      paper: '#fff',
+      default: '#F9FAFB', // light gray background
+      paper: '#FFFFFF',   // card/paper
+    },
+    text: {
+      primary: '#212B36',
+      secondary: '#637381',
     },
   },
   shape: { borderRadius: 12 },
+  typography: {
+    fontFamily: 'Inter, system-ui, Roboto, Arial',
+    h4: { fontWeight: 700 },
+    h5: { fontWeight: 600 },
+    subtitle2: { fontWeight: 500, color: '#637381' },
+  },
   components: {
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          border: `1px solid ${BORDER_COLOR}`,
-          // backgroundColor: BG_COLOR,     // 👈 force background
-        },
-      },
-    },
     MuiCard: {
       styleOverrides: {
         root: {
-          border: `1px solid ${BORDER_COLOR}`,
-          // backgroundColor: BG_COLOR,     // 👈 force background
+          boxShadow: '0 4px 8px rgba(145, 158, 171, 0.12)',
+          border: 'none',
         },
       },
     },
-    MuiAppBar: {
+    MuiPaper: {
       styleOverrides: {
         root: {
-          borderBottom: `2px solid ${BORDER_COLOR}`,
-          // backgroundColor: BG_COLOR,     // 👈 force background
-          color: BORDER_COLOR,           // 👈 make text/icons visible
+          boxShadow: '0 4px 8px rgba(145, 158, 171, 0.12)',
+          border: 'none',
         },
       },
     },
-    MuiDrawer: {
-      styleOverrides: {
-        paper: {
-          borderRight: `2px solid ${BORDER_COLOR}`,
-          // backgroundColor: BG_COLOR,     // 👈 force background
-        },
-      },
-    },
-  },
-  typography: {
-    fontFamily: 'Inter, system-ui, Roboto, Arial',
   },
 });
 
