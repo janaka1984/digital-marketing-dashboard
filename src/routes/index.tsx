@@ -6,7 +6,7 @@ import SignUpPage from "@features/auth/SignUpPage";
 import DashboardPage from "@features/dashboard/DashboardPage";
 import CampaignsPage from "@features/campaigns/CampaignsPage";
 import EventsPage from "@features/events/EventsPage";
-import MetaPixelForm from "@features/integrations/MetaPixelForm";
+import IntegrationsPage from "@features/integrations/IntegrationsPage";
 // import SettingsPage from "@features/settings/SettingsPage";
 import InviteClientForm from "@features/agency/InviteClientForm";
 import { useAppSelector } from "@store/hooks";
@@ -31,7 +31,7 @@ export function AppRoutes() {
         {/* Separate feature pages */}
         <Route path="campaigns" element={<CampaignsPage />} />
         <Route path="events" element={<EventsPage />} />
-        <Route path="integrations" element={<MetaPixelForm />} />
+        <Route path="integrations" element={<IntegrationsPage />} />
         {/* <Route path="settings" element={<SettingsPage />} /> */}
 
         {/* Agency-only route */}

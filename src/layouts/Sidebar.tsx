@@ -33,12 +33,12 @@ export default function Sidebar() {
     { text: "Overview", icon: <DashboardIcon />, path: "/" },
     { text: "Campaigns", icon: <CampaignIcon />, path: "/campaigns" },
     { text: "Events", icon: <EventIcon />, path: "/events" },
+    { text: "Integrations", icon: <IntegrationInstructionsIcon />, path: "/integrations" },
   ];
 
   // Extra menu for agency users
   const agencyMenu = [
     { text: "Clients", icon: <GroupIcon />, path: "/agency/clients" },
-    { text: "Integrations", icon: <IntegrationInstructionsIcon />, path: "/integrations" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
 
