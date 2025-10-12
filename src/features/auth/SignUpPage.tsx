@@ -6,6 +6,7 @@ import {
   Stack,
   TextField,
   Typography,
+  MenuItem,
 } from "@mui/material";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -20,14 +21,17 @@ export default function SignUpPage() {
     username: "",
     email: "",
     password: "",
-    role: "client",
+    role: "client", // default
     business_name: "",
+    agency_name: "",
+    company_website: "",
     token: token || "",
   });
+
   const [inviteInfo, setInviteInfo] = useState<any>(null);
   const [error, setError] = useState("");
 
-  //  Fetch invite details if token is in URL
+  // Fetch invite details if token is in URL
   useEffect(() => {
     if (token) {
       axios
@@ -38,6 +42,7 @@ export default function SignUpPage() {
             ...f,
             email: res.data.email || "",
             business_name: res.data.business_name || "",
+            role: "client", // invited users are always clients
           }));
         })
         .catch(() => setError("Invalid or expired invite link."));
@@ -51,34 +56,35 @@ export default function SignUpPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
     try {
       const payload = { ...form, username: form.email };
       await axios.post(`${API_BASE_URL}/accounts/auth/register/`, payload);
       navigate("/login");
     } catch (err: any) {
       console.error("Signup failed", err);
-      // 🔹 If backend sends validation errors, show them nicely
+
       if (err.response?.data) {
         const data = err.response.data;
-        if (typeof data === "string") {
-          setError(data);
-        } else if (typeof data === "object") {
-          // join all field errors into one line
+        if (typeof data === "string") setError(data);
+        else if (typeof data === "object") {
           const message = Object.entries(data)
-            .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(", ")}`)
+            .map(([f, msgs]) => `${f}: ${(msgs as string[]).join(", ")}`)
             .join("\n");
           setError(message);
-        } else {
-          setError("Registration failed. Please check your details and try again.");
-        }
-      } else {
-        setError("Network error. Please try again later.");
-      }
+        } else setError("Registration failed. Please check your details.");
+      } else setError("Network error. Please try again later.");
     }
   };
 
   return (
-    <Box display="grid" minHeight="100dvh" alignItems="center" justifyContent="center" p={2}>
+    <Box
+      display="grid"
+      minHeight="100dvh"
+      alignItems="center"
+      justifyContent="center"
+      p={2}
+    >
       <Paper sx={{ p: 4, width: 420 }}>
         <form onSubmit={onSubmit}>
           <Stack spacing={2}>
@@ -90,6 +96,21 @@ export default function SignUpPage() {
               <Typography variant="body2" color="text.secondary">
                 You’ve been invited by <b>{inviteInfo.agency}</b>
               </Typography>
+            )}
+
+            {/* Show dropdown only if not an invited signup */}
+            {!token && (
+              <TextField
+                select
+                label="Account Type"
+                name="role"
+                value={form.role}
+                onChange={handleChange}
+                fullWidth
+              >
+                <MenuItem value="agency">Agency</MenuItem>
+                <MenuItem value="client">Individual Client</MenuItem>
+              </TextField>
             )}
 
             <TextField
@@ -122,6 +143,26 @@ export default function SignUpPage() {
               fullWidth
               required
             />
+
+            {/* Extra fields for Agency signup */}
+            {!token && form.role === "agency" && (
+              <>
+                <TextField
+                  label="Agency Name"
+                  name="agency_name"
+                  value={form.agency_name}
+                  onChange={handleChange}
+                  fullWidth
+                />
+                <TextField
+                  label="Company Website"
+                  name="company_website"
+                  value={form.company_website}
+                  onChange={handleChange}
+                  fullWidth
+                />
+              </>
+            )}
 
             {error && <Typography color="error">{error}</Typography>}
 
