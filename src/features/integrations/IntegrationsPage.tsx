@@ -74,7 +74,7 @@ export default function IntegrationsPage() {
         test_event_code: form.test_event_code,
       });
 
-      alert("✅ Integration added successfully!");
+      alert(" Integration added successfully!");
       setForm({
         client_id: "",
         source_type: "meta",
@@ -86,7 +86,7 @@ export default function IntegrationsPage() {
       });
     } catch (err) {
       console.error("Error adding integration:", err);
-      alert("❌ Failed to save integration. Check console for details.");
+      alert(" Failed to save integration. Check console for details.");
     }
   };
 
