@@ -1,0 +1,47 @@
+name: Deploy Lucky1 Frontend to S3 + CloudFront
+
+on:
+  push:
+    tags:
+      - "lucky1-v*"   # trigger when tag starts with lucky1-v
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build React app
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.LUCKY1_VITE_API_BASE_URL }}
+
+      - name: Sync to S3 (Lucky1)
+        run: |
+          aws s3 sync build/ s3://$BUCKET_NAME/ --delete
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.LUCKY1_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.LUCKY1_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
+          BUCKET_NAME: pixel-dashboard   # Lucky1 bucket name
+
+      - name: Invalidate CloudFront (Lucky1)
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id $DISTRIBUTION_ID \
+            --paths "/*"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.LUCKY1_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.LUCKY1_AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ap-south-1
+          DISTRIBUTION_ID: E2WND7THLNBCVL   # Lucky1 CloudFront
