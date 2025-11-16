@@ -33,6 +33,8 @@ export default function IntegrationsPage() {
     api_version: "",
     business_id: "",
     test_event_code: "",
+    marketing_access_token: "",
+    marketing_ad_account_id: "",
   });
 
   // 🔹 Load clients if agency
@@ -72,6 +74,8 @@ export default function IntegrationsPage() {
         api_version: form.api_version,
         business_id: form.business_id,
         test_event_code: form.test_event_code,
+        marketing_access_token: form.marketing_access_token,
+        marketing_ad_account_id: form.marketing_ad_account_id,
       });
 
       alert(" Integration added successfully!");
@@ -83,6 +87,8 @@ export default function IntegrationsPage() {
         api_version: "",
         business_id: "",
         test_event_code: "",
+        marketing_access_token: "",
+        marketing_ad_account_id: "",
       });
     } catch (err) {
       console.error("Error adding integration:", err);
@@ -140,9 +146,23 @@ export default function IntegrationsPage() {
             fullWidth
           />
           <TextField
-            label="Access Token"
+            label="Access Token (Conversion API)"
             name="access_token"
             value={form.access_token}
+            onChange={handleChange}
+            fullWidth
+          />
+          <TextField
+            label="Marketing Access Token (Ads Insights)"
+            name="marketing_access_token"
+            value={form.marketing_access_token}
+            onChange={handleChange}
+            fullWidth
+          />
+          <TextField
+            label="Marketing Ad Account ID (act_xxx)"
+            name="marketing_ad_account_id"
+            value={form.marketing_ad_account_id}
             onChange={handleChange}
             fullWidth
           />
