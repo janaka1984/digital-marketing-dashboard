@@ -14,18 +14,19 @@ export const integrationApi = apiBase.injectEndpoints({
       }),
       invalidatesTags: [{ type: "Integration", id: "LIST" }],
     }),
-    addCredential: build.mutation({
+    addUpdateCredential: build.mutation({
       query: (data) => ({
         url: "integrations/credentials/",
         method: "POST",
         body: data,
       }),
     }),
+
   }),
 });
 
 export const {
   useListDataSourcesQuery,
   useAddDataSourceMutation,
-  useAddCredentialMutation,
+  useAddUpdateCredentialMutation,
 } = integrationApi;
