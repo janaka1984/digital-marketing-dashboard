@@ -22,12 +22,6 @@ export const eventApi = apiBase.injectEndpoints({
       query: () => 'tracking/events/stats',
       providesTags: [{ type: 'Stats', id: 'AGG' }],
     }),
-
-    // Campaign performance - works now because apiBase has "Campaign" in tagTypes
-    getCampaignPerformance: build.query<CampaignPerformance[], void>({
-      query: () => 'tracking/events/campaigns',
-      providesTags: [{ type: 'Campaign', id: 'LIST' }],
-    }),
   }),
   overrideExisting: false,
 });
@@ -35,5 +29,4 @@ export const eventApi = apiBase.injectEndpoints({
 export const {
   useListEventsQuery,
   useGetEventStatsQuery,
-  useGetCampaignPerformanceQuery,
 } = eventApi;
