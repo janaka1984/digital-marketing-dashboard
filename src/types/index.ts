@@ -18,10 +18,18 @@ export type EventStats = {
 };
 
 export type CampaignPerformance = {
+   id?: number | string;
+
   payload__utm_campaign: string | null;
   payload__utm_source: string | null;
   payload__utm_medium: string | null;
+
   pageviews: number;
   clicks: number;
-  conversions: number;
+  conversions: number; // keep as is
+  conversion_rate: number;
+
+  initiated: number;
+  purchases: number;
+  revenue: number;
 };
