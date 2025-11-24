@@ -11,6 +11,8 @@ import {
 } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import CampaignIcon from "@mui/icons-material/Campaign";
+import ShowChartIcon from "@mui/icons-material/ShowChart"; 
+import TravelExploreIcon from "@mui/icons-material/TravelExplore"; 
 import EventIcon from "@mui/icons-material/Event";
 import SettingsIcon from "@mui/icons-material/Settings";
 import IntegrationInstructionsIcon from "@mui/icons-material/IntegrationInstructions";
@@ -32,8 +34,11 @@ export default function Sidebar() {
   const baseMenu = [
     { text: "Overview", icon: <DashboardIcon />, path: "/" },
     { text: "Campaigns", icon: <CampaignIcon />, path: "/campaigns" },
+    { text: "Traffic & Funnel", icon: <ShowChartIcon />, path: "/traffic-funnel" },  
+    { text: "Sources", icon: <TravelExploreIcon />, path: "/sources" },
     { text: "Events", icon: <EventIcon />, path: "/events" },
     { text: "Integrations", icon: <IntegrationInstructionsIcon />, path: "/integrations" },
+
   ];
 
   // Extra menu for agency users

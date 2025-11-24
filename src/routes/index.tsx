@@ -5,6 +5,8 @@ import LoginPage from "@features/auth/LoginPage";
 import SignUpPage from "@features/auth/SignUpPage";
 import DashboardPage from "@features/dashboard/DashboardPage";
 import CampaignsPage from "@features/campaigns/CampaignsPage";
+import TrafficFunnelPage from "@features/dashboard/TrafficFunnelPage";
+import SourcesPage from "@features/dashboard/SourcesPage";
 import EventsPage from "@features/events/EventsPage";
 import IntegrationsPage from "@features/integrations/IntegrationsPage";
 // import SettingsPage from "@features/settings/SettingsPage";
@@ -30,6 +32,8 @@ export function AppRoutes() {
 
         {/* Separate feature pages */}
         <Route path="campaigns" element={<CampaignsPage />} />
+        <Route path="traffic-funnel" element={<TrafficFunnelPage />} />
+        <Route path="sources" element={<SourcesPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="integrations" element={<IntegrationsPage />} />
         {/* <Route path="settings" element={<SettingsPage />} /> */}
