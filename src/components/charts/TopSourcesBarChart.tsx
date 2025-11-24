@@ -1,37 +1,35 @@
 import Chart from "react-apexcharts";
 import { useTheme } from "@mui/material";
+import { ApexOptions } from "apexcharts";
 
-export default function TopSourcesBarChart({ data }) {
+type SourceItem = {
+  src: string | null;
+  count: number;
+};
+
+export default function TopSourcesBarChart({ data }: { data: SourceItem[] }) {
   const theme = useTheme();
 
-  // Normalize & dedupe categories
   const categories = Array.from(
     new Set(
-      data?.map((d) =>
-        (d.src || "Unknown")
-          .trim()
-          .replace(/^"|"$/g, "")
-          .toLowerCase()
+      data?.map((d: SourceItem) =>
+        (d.src || "Unknown").trim().replace(/^"|"$/g, "").toLowerCase()
       ) || []
     )
   );
 
-  // Recalculate counts for each normalized category
-  const counts = categories.map((cat) =>
+  const counts = categories.map((cat: string) =>
     data
       .filter(
-        (d) =>
-          (d.src || "Unknown")
-            .trim()
-            .replace(/^"|"$/g, "")
-            .toLowerCase() === cat
+        (d: SourceItem) =>
+          (d.src || "Unknown").trim().replace(/^"|"$/g, "").toLowerCase() === cat
       )
-      .reduce((sum, d) => sum + d.count, 0)
+      .reduce((sum: number, d: SourceItem) => sum + d.count, 0)
   );
 
   const series = [{ name: "Events", data: counts }];
 
-  const options = {
+  const options: ApexOptions = {
     chart: { type: "bar", toolbar: { show: false } },
     xaxis: {
       categories,

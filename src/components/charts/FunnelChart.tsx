@@ -1,7 +1,15 @@
 import Chart from "react-apexcharts";
 import { useTheme } from "@mui/material";
+import { ApexOptions } from "apexcharts";
 
-export default function FunnelChart({ data }) {
+type FunnelData = {
+  pageviews: number;
+  clicks: number;
+  initiated: number;
+  purchases: number;
+};
+
+export default function FunnelChart({ data }: { data: FunnelData }) {
   const theme = useTheme();
 
   const categories = ["Pageviews", "Clicks", "Initiated", "Purchases"];
@@ -14,7 +22,7 @@ export default function FunnelChart({ data }) {
 
   const series = [{ name: "Funnel", data: values }];
 
-  const options = {
+  const options: ApexOptions = {
     chart: { type: "bar", toolbar: { show: false } },
     plotOptions: {
       bar: {

@@ -1,14 +1,19 @@
 import Chart from "react-apexcharts";
 import { useTheme } from "@mui/material";
+import { ApexOptions } from "apexcharts";
 
-export default function DevicePieChart({ data }) {
+type DeviceItem = {
+  name: string;
+  count: number;
+};
+
+export default function DevicePieChart({ data }: { data: DeviceItem[] }) {
   const theme = useTheme();
 
-  const labels = data?.map((d) => d.name || "Other") || [];
+  const labels = data?.map((d: DeviceItem) => d.name || "Other") || [];
+  const series = data?.map((d: DeviceItem) => d.count) || [];
 
-  const series = data?.map((d) => d.count) || [];
-
-  const options = {
+  const options: ApexOptions = {
     labels,
     legend: { position: "bottom" },
     theme: { mode: theme.palette.mode },
