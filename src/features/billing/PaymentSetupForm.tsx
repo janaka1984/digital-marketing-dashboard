@@ -16,7 +16,7 @@ export default function PaymentSetupForm() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post("/api/billing/setup/", form, {
+      await axios.post("/billing/setup/", form, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
       alert("Payment method saved!");

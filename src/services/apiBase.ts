@@ -12,7 +12,7 @@ const baseQuery = fetchBaseQuery({
   },
 });
 
-// 🔁 Wrapper to handle 401 errors (refresh token)
+// Wrapper to handle 401 errors (refresh token)
 const baseQueryWithReauth: typeof baseQuery = async (args, api, extraOptions) => {
   let result = await baseQuery(args, api, extraOptions);
 
@@ -23,7 +23,7 @@ const baseQueryWithReauth: typeof baseQuery = async (args, api, extraOptions) =>
     if (refreshToken) {
       // Try refreshing
       const refreshResult = await baseQuery(
-        { url: "api/token/refresh/", method: "POST", body: { refresh: refreshToken } },
+        { url: "/token/refresh/", method: "POST", body: { refresh: refreshToken } },
         api,
         extraOptions
       );
