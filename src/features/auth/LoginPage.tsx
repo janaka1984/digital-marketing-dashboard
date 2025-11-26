@@ -46,7 +46,11 @@ export default function LoginPage() {
       );
 
       // 4 Redirect to dashboard
-      navigate("/", { replace: true });
+      if (user?.role === "agency") {
+          navigate("/agency/overview");
+      } else {
+          navigate("/client/overview");
+      }
     } catch (err: any) {
       console.error("Login failed", err);
       setError("Invalid email or password. Please try again.");

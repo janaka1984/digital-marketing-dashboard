@@ -30,24 +30,30 @@ export default function Sidebar() {
 
   const role = user?.role || "client";
 
-  // Base menu
-  const baseMenu = [
-    { text: "Overview", icon: <DashboardIcon />, path: "/" },
+  // -------------------------------
+  // CLIENT MENU
+  // -------------------------------
+  const clientMenu = [
+    { text: "Overview", icon: <DashboardIcon />, path: "/client/overview" },
     { text: "Campaigns", icon: <CampaignIcon />, path: "/campaigns" },
-    { text: "Traffic & Funnel", icon: <ShowChartIcon />, path: "/traffic-funnel" },  
+    { text: "Traffic & Funnel", icon: <ShowChartIcon />, path: "/traffic-funnel" },
     { text: "Sources", icon: <TravelExploreIcon />, path: "/sources" },
     { text: "Events", icon: <EventIcon />, path: "/events" },
     { text: "Integrations", icon: <IntegrationInstructionsIcon />, path: "/integrations" },
-
   ];
 
-  // Extra menu for agency users
+  // -------------------------------
+  // AGENCY MENU (fully separate)
+  // -------------------------------
   const agencyMenu = [
+    { text: "Overview", icon: <DashboardIcon />, path: "/agency/overview" },
+    { text: "Analytics", icon: <ShowChartIcon />, path: "/agency/analytics" },
     { text: "Clients", icon: <GroupIcon />, path: "/agency/clients" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
 
-  const menuItems = role === "agency" ? [...baseMenu, ...agencyMenu] : baseMenu;
+  // Final menu selection
+  const menuItems = role === "agency" ? agencyMenu : clientMenu;
 
   const handleLogout = () => {
     dispatch(signOut());

@@ -35,6 +35,17 @@ export const dashboardApi = apiBase.injectEndpoints({
           : `tracking/dashboard-campaigns/?days=${days}`;
       },
     }),
+
+    // Agency Overview (for agency users)
+    getAgencyOverview: build.query({
+      query: (params: any = {}) => {
+        const { range, days = 30 } = params;
+
+        return range
+          ? `tracking/agency-overview/?range=${range}`
+          : `tracking/agency-overview/?days=${days}`;
+      },
+    }),
   }),
 
   // ensures no conflict with eventApi
@@ -45,4 +56,5 @@ export const {
   useGetDashboardOverviewQuery,
   useGetDashboardFunnelQuery,
   useGetDashboardCampaignsQuery,
+  useGetAgencyOverviewQuery,
 } = dashboardApi;

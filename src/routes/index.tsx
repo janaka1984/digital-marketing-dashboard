@@ -11,6 +11,8 @@ import EventsPage from "@features/events/EventsPage";
 import IntegrationsPage from "@features/integrations/IntegrationsPage";
 // import SettingsPage from "@features/settings/SettingsPage";
 import InviteClientForm from "@features/agency/InviteClientForm";
+import AgencyOverviewPage from "@features/dashboard/AgencyOverviewPage";
+import AgencyAnalyticsPage from "@features/dashboard/AgencyAnalyticsPage";
 import { useAppSelector } from "@store/hooks";
 
 export function AppRoutes() {
@@ -40,6 +42,8 @@ export function AppRoutes() {
 
         {/* Agency-only route */}
         <Route path="agency/clients" element={<InviteClientForm />} />
+        <Route path="agency/overview" element={<AgencyOverviewPage />} />
+        <Route path="agency/analytics" element={<AgencyAnalyticsPage />} />
       </Route>
 
       {/* Fallback */}

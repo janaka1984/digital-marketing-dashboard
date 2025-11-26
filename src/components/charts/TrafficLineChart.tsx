@@ -1,30 +1,39 @@
 import Chart from "react-apexcharts";
 import { useTheme } from "@mui/material";
-import { ApexOptions } from "apexcharts";
 
-type TrafficItem = {
-  day: string;
-  count: number;
-};
-
-export default function TrafficLineChart({ data }: { data: TrafficItem[] }) {
+export default function TrafficLineChart({ data, mini = false }) {
   const theme = useTheme();
 
-  const dates = data?.map((d: TrafficItem) => d.day) || [];
-  const counts = data?.map((d: TrafficItem) => d.count) || [];
-
-  const series = [{ name: "Events", data: counts }];
-
-  const options: ApexOptions = {
-    chart: { type: "line", toolbar: { show: false } },
-    xaxis: {
-      categories: dates,
-      labels: { style: { colors: theme.palette.text.secondary } },
+  const series = [
+    {
+      name: "Events",
+      data: data?.map((d) => d.count) || [],
     },
-    stroke: { curve: "smooth", width: 3 },
-    colors: ["#2065D1"],
+  ];
+
+  const categories = data?.map((d) => d.day) || [];
+
+  const options = {
+    chart: {
+      animations: { enabled: true },
+      toolbar: { show: !mini },
+      height: mini ? 150 : 320,
+      sparkline: { enabled: mini }, // mini mode
+    },
+    xaxis: {
+      categories,
+      labels: { show: !mini }, // hide labels in mini
+    },
+    yaxis: {
+      labels: { show: !mini },
+    },
+    stroke: {
+      curve: "smooth",
+      width: mini ? 2 : 3,
+    },
+    grid: { show: !mini },
     theme: { mode: theme.palette.mode },
   };
 
-  return <Chart type="line" height={350} series={series} options={options} />;
+  return <Chart type="line" height={mini ? 150 : 320} series={series} options={options} />;
 }
