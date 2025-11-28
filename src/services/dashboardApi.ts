@@ -46,8 +46,25 @@ export const dashboardApi = apiBase.injectEndpoints({
           : `tracking/agency-overview/?days=${days}`;
       },
     }),
-  }),
 
+    // Geo summary for map
+    getEventsGeoSummary: build.query({
+      query: (params: any = {}) => {
+        const { range, client_id } = params;
+
+        let url = `tracking/events-geo-summary/`;
+
+        const search = [];
+        if (range) search.push(`range=${range}`);
+        if (client_id) search.push(`client_id=${client_id}`);
+
+        if (search.length > 0) url += `?${search.join("&")}`;
+
+        return url;
+      },
+    }),
+
+  }),
   // ensures no conflict with eventApi
   overrideExisting: false,
 });
@@ -57,4 +74,5 @@ export const {
   useGetDashboardFunnelQuery,
   useGetDashboardCampaignsQuery,
   useGetAgencyOverviewQuery,
+  useGetEventsGeoSummaryQuery,
 } = dashboardApi;

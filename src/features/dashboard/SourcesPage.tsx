@@ -10,15 +10,18 @@ import {
 import Grid from "@mui/material/Grid2";
 
 import { useAppSelector } from "@store/hooks";
-import { useGetDashboardOverviewQuery } from "@services/dashboardApi";
+import { useGetDashboardOverviewQuery, useGetEventsGeoSummaryQuery } from "@services/dashboardApi";
 
 import TopSourcesBarChart from "@components/charts/TopSourcesBarChart";
+import EventGeoMap from "@components/EventGeoMap";
 
 export default function SourcesPage() {
   const user = useAppSelector((s) => s.auth.user);
   const role = user?.role || "client";
 
   const [range, setRange] = useState("last30");
+  const { data: geoData } = useGetEventsGeoSummaryQuery({ range });
+
 
   const { data: overview, isFetching } =
     useGetDashboardOverviewQuery({ range });
@@ -26,6 +29,9 @@ export default function SourcesPage() {
   const sources = overview?.top_sources || [];
   const mediums = overview?.top_mediums || [];
   const referrers = overview?.referrers || [];
+
+  // Extract markers array safely
+  const markers = geoData?.locations ?? [];
 
   return (
     <Stack spacing={3}>
@@ -93,6 +99,15 @@ export default function SourcesPage() {
           </Box>
         </Grid>
       </Grid>
+
+      {/* GEO MAP */}
+      <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2, mt: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1.5 }}>
+          Visitor Locations (Map)
+        </Typography>
+
+        <EventGeoMap markers={markers} />
+      </Box>
     </Stack>
   );
 }
