@@ -22,47 +22,7 @@ import ShowChartIcon from "@mui/icons-material/ShowChart";
 import PageviewIcon from "@mui/icons-material/Pageview";
 import TouchAppIcon from "@mui/icons-material/TouchApp";
 import PersonIcon from "@mui/icons-material/Person";
-
-// ---------- TYPES ----------
-interface ClientItem {
-  client_id: string | number;
-  client_name: string;
-  pageviews?: number;
-  clicks?: number;
-  initiated?: number;
-  last_event?: string;
-}
-
-interface DailyItem {
-  day: string;
-  count: number;
-}
-
-interface DeviceItem {
-  name: string;
-  count: number;
-}
-
-interface SourceItem {
-  src: string;
-  count: number;
-}
-
-interface AgencyOverviewResponse {
-  summary: {
-    total_clients: number;
-    active_clients: number;
-    pageviews: number;
-    clicks: number;
-  };
-  clients: ClientItem[];
-  daily: DailyItem[];
-  clients_daily: Record<string, DailyItem[]>;
-  device_breakdown: DeviceItem[];
-  clients_device_breakdown: Record<string, DeviceItem[]>;
-  traffic_sources: SourceItem[];
-  clients_traffic_sources: Record<string, SourceItem[]>;
-}
+import { AgencyDeviceItem,AgencySourceItem, AgencyOverviewResponse } from "@types";
 
 // ---------- COMPONENT ----------
 export default function AgencyAnalyticsPage() {
@@ -72,10 +32,22 @@ export default function AgencyAnalyticsPage() {
   const [selectedClientDevice, setSelectedClientDevice] = useState("all");
   const [selectedClientSources, setSelectedClientSources] = useState("all");
 
-  const { data, isLoading } =
-    useGetAgencyOverviewQuery<AgencyOverviewResponse>({ range });
+  const { data, isLoading } = useGetAgencyOverviewQuery({ range });
 
-  const summary = data?.summary || {};
+
+  // const summary = data?.summary || {};
+  const summary: AgencyOverviewResponse["summary"] =
+  data?.summary ?? {
+    total_clients: 0,
+    active_clients: 0,
+    pageviews: 0,
+    clicks: 0,
+    // add missing fields required by your shared version
+    initiated: 0,
+    inactive_clients: 0,
+    total_events: 0,
+  };
+
 
   return (
     <Stack spacing={3}>
@@ -167,7 +139,8 @@ export default function AgencyAnalyticsPage() {
               data={
                 selectedClientTrend === "all"
                   ? data?.daily || []
-                  : data?.clients_daily?.[selectedClientTrend] || []
+                  : data?.clients_daily?.[Number(selectedClientTrend)] || []
+
               }
             />
           </Box>
@@ -215,8 +188,8 @@ export default function AgencyAnalyticsPage() {
               data={
                 (selectedClientDevice === "all"
                   ? data?.device_breakdown
-                  : data?.clients_device_breakdown?.[selectedClientDevice]
-                )?.map((d) => ({
+                  : data?.clients_device_breakdown?.[Number(selectedClientDevice)]
+                )?.map((d: AgencyDeviceItem) => ({
                   name: d.name,
                   count: d.count,
                 })) || []
@@ -270,8 +243,8 @@ export default function AgencyAnalyticsPage() {
               data={
                 (selectedClientSources === "all"
                   ? data?.traffic_sources
-                  : data?.clients_traffic_sources?.[selectedClientSources]
-                )?.map((d) => ({
+                  : data?.clients_traffic_sources?.[Number(selectedClientSources)]
+                )?.map((d: AgencySourceItem) => ({
                   src: d.src,
                   count: d.count,
                 })) || []

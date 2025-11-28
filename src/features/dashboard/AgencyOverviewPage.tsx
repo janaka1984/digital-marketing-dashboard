@@ -19,17 +19,28 @@ import TravelExploreIcon from "@mui/icons-material/TravelExplore";
 import { useGetAgencyOverviewQuery } from "@services/dashboardApi";
 import StatCard from "@components/StatCard";
 
-import AgencyClientTable from "@components/AgencyClientsTable";
+import AgencyClientTable from "@components/AgencyClientTable";
 import DevicePieChart from "@components/charts/DevicePieChart";
 import TopSourcesBarChart from "@components/charts/TopSourcesBarChart";
 import TrafficLineChart from "@components/charts/TrafficLineChart";
+import { AgencyOverviewResponse } from "@types";
 
 export default function AgencyOverviewPage() {
   const [range, setRange] = useState("last30");
 
   const { data, isFetching } = useGetAgencyOverviewQuery({ range });
 
-  const summary = data?.summary || {};
+  const summary: AgencyOverviewResponse["summary"] =
+    data?.summary ?? {
+      total_clients: 0,
+      active_clients: 0,
+      pageviews: 0,
+      clicks: 0,
+      // add missing fields required by your shared version
+      initiated: 0,
+      inactive_clients: 0,
+      total_events: 0,
+    };
 
   return (
     <Stack spacing={3}>

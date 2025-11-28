@@ -16,8 +16,8 @@
       "@components/*": ["src/components/*"],
       "@features/*": ["src/features/*"],
       "@utils/*": ["src/utils/*"],
-      "@types": ["src/types/index.ts"],
-      "@types/*": ["src/types/*"]
+       "@types": ["src/types/index.ts"],
+       "@types/*": ["src/types/*.ts"]
     },
     "types": ["node", "vite/client"],
     "allowJs": false,

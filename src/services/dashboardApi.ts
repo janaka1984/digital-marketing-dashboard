@@ -1,4 +1,5 @@
 import { apiBase } from "./apiBase";
+import { AgencyOverviewResponse } from "../types/agency";
 
 export const dashboardApi = apiBase.injectEndpoints({
   endpoints: (build) => ({
@@ -37,7 +38,7 @@ export const dashboardApi = apiBase.injectEndpoints({
     }),
 
     // Agency Overview (for agency users)
-    getAgencyOverview: build.query({
+    getAgencyOverview: build.query<AgencyOverviewResponse, { range?: string; days?: number }>({
       query: (params: any = {}) => {
         const { range, days = 30 } = params;
 
