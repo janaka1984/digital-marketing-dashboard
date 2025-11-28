@@ -1,6 +1,15 @@
-import { Box, Stack, Typography, FormControl, MenuItem, Select } from "@mui/material";
+// src/features/dashboard/AgencyAnalyticsPage.tsx
+import {
+  Box,
+  Stack,
+  Typography,
+  FormControl,
+  MenuItem,
+  Select,
+} from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { useState } from "react";
+
 import { useGetAgencyOverviewQuery } from "@services/dashboardApi";
 
 import StatCard from "@components/StatCard";
@@ -14,22 +23,59 @@ import PageviewIcon from "@mui/icons-material/Pageview";
 import TouchAppIcon from "@mui/icons-material/TouchApp";
 import PersonIcon from "@mui/icons-material/Person";
 
+// ---------- TYPES ----------
+interface ClientItem {
+  client_id: string | number;
+  client_name: string;
+  pageviews?: number;
+  clicks?: number;
+  initiated?: number;
+  last_event?: string;
+}
+
+interface DailyItem {
+  day: string;
+  count: number;
+}
+
+interface DeviceItem {
+  name: string;
+  count: number;
+}
+
+interface SourceItem {
+  src: string;
+  count: number;
+}
+
+interface AgencyOverviewResponse {
+  summary: {
+    total_clients: number;
+    active_clients: number;
+    pageviews: number;
+    clicks: number;
+  };
+  clients: ClientItem[];
+  daily: DailyItem[];
+  clients_daily: Record<string, DailyItem[]>;
+  device_breakdown: DeviceItem[];
+  clients_device_breakdown: Record<string, DeviceItem[]>;
+  traffic_sources: SourceItem[];
+  clients_traffic_sources: Record<string, SourceItem[]>;
+}
+
+// ---------- COMPONENT ----------
 export default function AgencyAnalyticsPage() {
   const [range, setRange] = useState("last30");
 
-  // ✅ Three independent dropdown states
   const [selectedClientTrend, setSelectedClientTrend] = useState("all");
   const [selectedClientDevice, setSelectedClientDevice] = useState("all");
   const [selectedClientSources, setSelectedClientSources] = useState("all");
 
-  const { data, isLoading } = useGetAgencyOverviewQuery({ range });
-  const summary = data?.summary || {};
+  const { data, isLoading } =
+    useGetAgencyOverviewQuery<AgencyOverviewResponse>({ range });
 
-//   // ✅ Independent filter for TREND chart
-//   const filteredDaily =
-//     selectedClientTrend === "all"
-//       ? data?.daily || []
-//       : data?.clients_daily?.[selectedClientTrend] || [];
+  const summary = data?.summary || {};
 
   return (
     <Stack spacing={3}>
@@ -53,36 +99,54 @@ export default function AgencyAnalyticsPage() {
       {/* KPI CARDS */}
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard title="Total Clients" icon={PersonIcon} color="#2065D1" value={summary.total_clients || 0} />
+          <StatCard
+            title="Total Clients"
+            icon={PersonIcon}
+            color="#2065D1"
+            value={summary?.total_clients || 0}
+          />
         </Grid>
 
         <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard title="Active Clients (24h)" icon={ShowChartIcon} color="#1ABC9C" value={summary.active_clients || 0} />
+          <StatCard
+            title="Active Clients (24h)"
+            icon={ShowChartIcon}
+            color="#1ABC9C"
+            value={summary?.active_clients || 0}
+          />
         </Grid>
 
         <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard title="PageViews" icon={PageviewIcon} color="#FF6B6B" value={summary.pageviews || 0} />
+          <StatCard
+            title="PageViews"
+            icon={PageviewIcon}
+            color="#FF6B6B"
+            value={summary?.pageviews || 0}
+          />
         </Grid>
 
         <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard title="Clicks" icon={TouchAppIcon} color="#7E57C2" value={summary.clicks || 0} />
+          <StatCard
+            title="Clicks"
+            icon={TouchAppIcon}
+            color="#7E57C2"
+            value={summary?.clicks || 0}
+          />
         </Grid>
       </Grid>
 
-
-      {/* CHARTS */}
+      {/* ==================== CHARTS ==================== */}
       <Grid container spacing={2}>
-
-        {/* ==================== DAILY TRAFFIC TREND ==================== */}
+        {/* DAILY TRAFFIC TREND */}
         <Grid size={{ xs: 12, md: 8 }}>
           <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2 }}>
-            {/* Title + Dropdown */}
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-              <Typography variant="h6">
-                Daily Traffic Trend (
-                {selectedClientTrend === "all" ? "All Clients" : "Selected Client"}
-                )
-              </Typography>
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={2}
+              sx={{ mb: 2 }}
+            >
+              <Typography variant="h6">Daily Traffic Trend</Typography>
 
               <FormControl size="small" sx={{ minWidth: 160 }}>
                 <Select
@@ -99,18 +163,29 @@ export default function AgencyAnalyticsPage() {
               </FormControl>
             </Stack>
 
-            <TrafficLineChart data={selectedClientTrend === "all"
-            ? data?.daily || []
-            : data?.clients_daily?.[selectedClientTrend] || []} 
+            <TrafficLineChart
+              data={
+                selectedClientTrend === "all"
+                  ? data?.daily || []
+                  : data?.clients_daily?.[selectedClientTrend] || []
+              }
             />
           </Box>
         </Grid>
 
-
-        {/* ==================== DEVICE BREAKDOWN ==================== */}
+        {/* DEVICE BREAKDOWN */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2, position: "relative" }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Device Breakdown</Typography>
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 2,
+              position: "relative",
+            }}
+          >
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Device Breakdown
+            </Typography>
 
             <FormControl
               size="small"
@@ -151,14 +226,21 @@ export default function AgencyAnalyticsPage() {
         </Grid>
       </Grid>
 
-
       {/* ==================== SOURCES + CLIENT TABLE ==================== */}
       <Grid container spacing={2}>
-
-        {/* TOP TRAFFIC SOURCES */}
+        {/* TOP SOURCES */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2, position: "relative" }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Top Traffic Sources</Typography>
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 2,
+              position: "relative",
+            }}
+          >
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Top Traffic Sources
+            </Typography>
 
             <FormControl
               size="small"
@@ -190,7 +272,7 @@ export default function AgencyAnalyticsPage() {
                   ? data?.traffic_sources
                   : data?.clients_traffic_sources?.[selectedClientSources]
                 )?.map((d) => ({
-                  src: (d.src || "").replace(/"/g, ""),
+                  src: d.src,
                   count: d.count,
                 })) || []
               }
@@ -198,15 +280,15 @@ export default function AgencyAnalyticsPage() {
           </Box>
         </Grid>
 
-
-        {/* CLIENT DISTRIBUTION TABLE */}
+        {/* CLIENT TABLE */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Client Traffic Distribution</Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Client Traffic Distribution
+            </Typography>
             <AgencyClientTable rows={data?.clients || []} />
           </Box>
         </Grid>
-
       </Grid>
     </Stack>
   );

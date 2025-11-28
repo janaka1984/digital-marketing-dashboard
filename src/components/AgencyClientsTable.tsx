@@ -1,7 +1,23 @@
+// src/components/AgencyClientTable.tsx
 import { Box } from "@mui/material";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 
-export default function AgencyClientTable({ rows, loading }) {
+// -------- Types --------
+export interface AgencyClientRow {
+  client_id: number | string;
+  client_name: string;
+  pageviews: number;
+  clicks: number;
+  initiated: number;
+  last_event: string;
+}
+
+interface Props {
+  rows: AgencyClientRow[];
+  loading?: boolean;
+}
+
+export default function AgencyClientTable({ rows, loading = false }: Props) {
   const columns: GridColDef[] = [
     { field: "client_name", headerName: "Client", flex: 1 },
     { field: "pageviews", headerName: "PageViews", flex: 1 },
