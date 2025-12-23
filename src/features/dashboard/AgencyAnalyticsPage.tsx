@@ -26,7 +26,7 @@ import { AgencyDeviceItem,AgencySourceItem, AgencyOverviewResponse } from "@type
 
 // ---------- COMPONENT ----------
 export default function AgencyAnalyticsPage() {
-  const [range, setRange] = useState("last30");
+  const [range, setRange] = useState("last7");
 
   const [selectedClientTrend, setSelectedClientTrend] = useState("all");
   const [selectedClientDevice, setSelectedClientDevice] = useState("all");

@@ -22,7 +22,7 @@ export default function TrafficFunnelPage() {
   const user = useAppSelector((s) => s.auth.user);
   const role = user?.role || "client";
 
-  const [range, setRange] = useState("last30");
+  const [range, setRange] = useState("last7");
 
   const { data: overview, isFetching: loadingOverview } =
     useGetDashboardOverviewQuery({ range });

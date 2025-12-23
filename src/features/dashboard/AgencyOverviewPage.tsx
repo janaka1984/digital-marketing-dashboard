@@ -26,7 +26,7 @@ import TrafficLineChart from "@components/charts/TrafficLineChart";
 import { AgencyOverviewResponse } from "@types";
 
 export default function AgencyOverviewPage() {
-  const [range, setRange] = useState("last30");
+  const [range, setRange] = useState("last7");
 
   const { data, isFetching } = useGetAgencyOverviewQuery({ range });
 

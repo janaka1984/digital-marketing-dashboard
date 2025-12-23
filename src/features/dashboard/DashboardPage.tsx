@@ -26,7 +26,7 @@ import DevicePieChart from "@components/charts/DevicePieChart";
 export default function DashboardPage() {
   const user = useAppSelector((s) => s.auth.user);
 
-  const [range, setRange] = useState("last30");
+  const [range, setRange] = useState("last7");
 
   const { data: overview, isFetching: loadingOverview } = useGetDashboardOverviewQuery({ range });
   const { data: funnel } = useGetDashboardFunnelQuery({ range });

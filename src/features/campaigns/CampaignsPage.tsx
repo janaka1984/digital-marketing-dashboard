@@ -8,7 +8,7 @@ export default function CampaignsPage() {
   const user = useAppSelector((s) => s.auth.user);
   const role = user?.role || "client";
 
-  const [range, setRange] = useState("last30");
+  const [range, setRange] = useState("last7");
 
   const { data, isFetching } = useGetDashboardCampaignsQuery({ range });
 
