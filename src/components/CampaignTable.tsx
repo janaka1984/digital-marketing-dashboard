@@ -1,6 +1,6 @@
-import { Box } from "@mui/material";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import type { CampaignPerformance } from "@types";
+import { Box } from '@mui/material';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import type { CampaignPerformance } from '@types';
 
 type Props = {
   rows: CampaignPerformance[];
@@ -8,7 +8,6 @@ type Props = {
 };
 
 export default function CampaignTable({ rows, loading }: Props) {
-  // Compute totals
   const totals = rows.reduce(
     (acc, row) => {
       acc.pageviews += row.pageviews || 0;
@@ -21,46 +20,59 @@ export default function CampaignTable({ rows, loading }: Props) {
     { pageviews: 0, clicks: 0, initiated: 0, purchases: 0, revenue: 0 }
   );
 
-  // Add total row
   const rowsWithTotal = [
     ...rows,
     {
-      id: "total-row",
-      utm_campaign: "Total",
-      utm_source: "",
-      utm_medium: "",
+      id: 'total-row',
+      utm_campaign: 'Total',
+      utm_source: '',
+      utm_medium: '',
       pageviews: totals.pageviews,
       clicks: totals.clicks,
       initiated: totals.initiated,
       purchases: totals.purchases,
       revenue: totals.revenue,
-      conversion_rate: 0,
-    },
+      conversion_rate: 0
+    }
   ];
 
   const columns: GridColDef[] = [
-    { field: "utm_campaign", headerName: "Campaign", flex: 1 },
-    { field: "utm_source", headerName: "Source", flex: 1 },
-    { field: "utm_medium", headerName: "Medium", flex: 1 },
-    { field: "pageviews", headerName: "PageViews", flex: 1 },
-    { field: "clicks", headerName: "Clicks", flex: 1 },
-    { field: "initiated", headerName: "Initiated", flex: 1 },
-    { field: "purchases", headerName: "Purchases", flex: 1 },
-    { field: "revenue", headerName: "Revenue (LKR)", flex: 1 },
-    { field: "conversion_rate", headerName: "Conv. Rate (%)", flex: 1 },
+    { field: 'utm_campaign', headerName: 'Campaign', flex: 1 },
+    { field: 'utm_source', headerName: 'Source', flex: 1 },
+    { field: 'utm_medium', headerName: 'Medium', flex: 1 },
+    { field: 'pageviews', headerName: 'PageViews', flex: 1 },
+    { field: 'clicks', headerName: 'Clicks', flex: 1 },
+    { field: 'initiated', headerName: 'Initiated', flex: 1 },
+    { field: 'purchases', headerName: 'Purchases', flex: 1 },
+    { field: 'revenue', headerName: 'Revenue (LKR)', flex: 1 },
+    { field: 'conversion_rate', headerName: 'Conv. Rate (%)', flex: 1 }
   ];
 
   return (
-    <Box sx={{ height: 400, width: "100%" }}>
+    <Box sx={{ height: 400, width: '100%' }}>
       <DataGrid
         rows={rowsWithTotal}
         columns={columns}
-        getRowId={(row) =>
-          row.id ||
-          `${row.utm_campaign}-${row.utm_source}-${row.utm_medium}`
-        }
+        getRowId={(row) => row.id || `${row.utm_campaign}-${row.utm_source}-${row.utm_medium}`}
         loading={loading}
         disableRowSelectionOnClick
+        sx={{
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
+          bgcolor: 'background.paper',
+          '& .MuiDataGrid-columnHeaders': {
+            bgcolor: '#F7F9FC',
+            borderBottom: '1px solid #E5EAF1',
+            fontWeight: 600
+          },
+          '& .MuiDataGrid-cell': {
+            borderBottom: '1px solid #EEF2F6'
+          },
+          '& .MuiDataGrid-row:hover': {
+            bgcolor: 'rgba(94,53,177,0.04)'
+          }
+        }}
       />
     </Box>
   );

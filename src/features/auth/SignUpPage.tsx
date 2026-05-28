@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -6,32 +6,31 @@ import {
   Stack,
   TextField,
   Typography,
-  MenuItem,
-} from "@mui/material";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import axios from "axios";
-import { API_BASE_URL } from "@utils/env";
+  MenuItem
+} from '@mui/material';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import axios from 'axios';
+import { API_BASE_URL } from '@utils/env';
 
 export default function SignUpPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const token = params.get("token");
+  const token = params.get('token');
 
   const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: "",
-    role: "client", // default
-    business_name: "",
-    agency_name: "",
-    company_website: "",
-    token: token || "",
+    username: '',
+    email: '',
+    password: '',
+    role: 'client',
+    business_name: '',
+    agency_name: '',
+    company_website: '',
+    token: token || ''
   });
 
   const [inviteInfo, setInviteInfo] = useState<any>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  // Fetch invite details if token is in URL
   useEffect(() => {
     if (token) {
       axios
@@ -40,12 +39,12 @@ export default function SignUpPage() {
           setInviteInfo(res.data);
           setForm((f) => ({
             ...f,
-            email: res.data.email || "",
-            business_name: res.data.business_name || "",
-            role: "client", // invited users are always clients
+            email: res.data.email || '',
+            business_name: res.data.business_name || '',
+            role: 'client'
           }));
         })
-        .catch(() => setError("Invalid or expired invite link."));
+        .catch(() => setError('Invalid or expired invite link.'));
     }
   }, [token]);
 
@@ -55,51 +54,53 @@ export default function SignUpPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
 
     try {
       const payload = { ...form, username: form.email };
       await axios.post(`${API_BASE_URL}/accounts/auth/register/`, payload);
-      navigate("/login");
+      navigate('/login');
     } catch (err: any) {
-      console.error("Signup failed", err);
+      console.error('Signup failed', err);
 
       if (err.response?.data) {
         const data = err.response.data;
-        if (typeof data === "string") setError(data);
-        else if (typeof data === "object") {
+        if (typeof data === 'string') setError(data);
+        else if (typeof data === 'object') {
           const message = Object.entries(data)
-            .map(([f, msgs]) => `${f}: ${(msgs as string[]).join(", ")}`)
-            .join("\n");
+            .map(([f, msgs]) => `${f}: ${(msgs as string[]).join(', ')}`)
+            .join('\n');
           setError(message);
-        } else setError("Registration failed. Please check your details.");
-      } else setError("Network error. Please try again later.");
+        } else setError('Registration failed. Please check your details.');
+      } else setError('Network error. Please try again later.');
     }
   };
 
   return (
     <Box
-      display="grid"
-      minHeight="100dvh"
-      alignItems="center"
-      justifyContent="center"
-      p={2}
+      sx={{
+        minHeight: '100dvh',
+        display: 'grid',
+        placeItems: 'center',
+        p: 2,
+        background: 'linear-gradient(145deg, #eef2f6 0%, #e2e9f4 100%)'
+      }}
     >
-      <Paper sx={{ p: 4, width: 420 }}>
+      <Paper sx={{ width: '100%', maxWidth: 460, p: { xs: 3, sm: 4 } }}>
         <form onSubmit={onSubmit}>
           <Stack spacing={2}>
-            <Typography variant="h5">
-              {token ? "Accept Invite & Create Account" : "Create Account"}
-            </Typography>
-
-            {inviteInfo && (
-              <Typography variant="body2" color="text.secondary">
-                You’ve been invited by <b>{inviteInfo.agency}</b>
+            <Stack spacing={0.5}>
+              <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '1.8rem' } }}>
+                {token ? 'Accept Invite & Create Account' : 'Create Account'}
               </Typography>
-            )}
+              {inviteInfo ? (
+                <Typography variant="body2" color="text.secondary">
+                  You have been invited by <b>{inviteInfo.agency}</b>
+                </Typography>
+              ) : null}
+            </Stack>
 
-            {/* Show dropdown only if not an invited signup */}
-            {!token && (
+            {!token ? (
               <TextField
                 select
                 label="Account Type"
@@ -111,7 +112,7 @@ export default function SignUpPage() {
                 <MenuItem value="agency">Agency</MenuItem>
                 <MenuItem value="client">Individual Client</MenuItem>
               </TextField>
-            )}
+            ) : null}
 
             <TextField
               label="Business Name"
@@ -144,8 +145,7 @@ export default function SignUpPage() {
               required
             />
 
-            {/* Extra fields for Agency signup */}
-            {!token && form.role === "agency" && (
+            {!token && form.role === 'agency' ? (
               <>
                 <TextField
                   label="Agency Name"
@@ -162,25 +162,26 @@ export default function SignUpPage() {
                   fullWidth
                 />
               </>
-            )}
+            ) : null}
 
-            {error && <Typography color="error">{error}</Typography>}
+            {error ? (
+              <Typography color="error" sx={{ whiteSpace: 'pre-line' }}>
+                {error}
+              </Typography>
+            ) : null}
 
-            <Button type="submit" variant="contained" fullWidth>
-              {token ? "Join Agency" : "Sign Up"}
+            <Button type="submit" variant="contained" fullWidth size="large">
+              {token ? 'Join Agency' : 'Sign Up'}
             </Button>
 
-            {!token && (
-              <Typography align="center">
-                Already have an account?{" "}
-                <Link
-                  to="/login"
-                  style={{ textDecoration: "none", color: "#1976d2" }}
-                >
+            {!token ? (
+              <Typography align="center" variant="body2" color="text.secondary">
+                Already have an account?{' '}
+                <Link to="/login" style={{ textDecoration: 'none' }}>
                   Log in
                 </Link>
               </Typography>
-            )}
+            ) : null}
           </Stack>
         </form>
       </Paper>

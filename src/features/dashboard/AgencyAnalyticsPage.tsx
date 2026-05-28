@@ -1,62 +1,54 @@
-// src/features/dashboard/AgencyAnalyticsPage.tsx
-import {
-  Box,
-  Stack,
-  Typography,
-  FormControl,
-  MenuItem,
-  Select,
-} from "@mui/material";
-import Grid from "@mui/material/Grid2";
-import { useState } from "react";
+import { Box, Stack, Typography, FormControl, MenuItem, Select } from '@mui/material';
+import Grid from '@mui/material/Grid2';
+import { useState } from 'react';
 
-import { useGetAgencyOverviewQuery } from "@services/dashboardApi";
+import { useGetAgencyOverviewQuery } from '@services/dashboardApi';
 
-import StatCard from "@components/StatCard";
-import DevicePieChart from "@components/charts/DevicePieChart";
-import TopSourcesBarChart from "@components/charts/TopSourcesBarChart";
-import TrafficLineChart from "@components/charts/TrafficLineChart";
-import AgencyClientTable from "@components/AgencyClientTable";
+import StatCard from '@components/StatCard';
+import DevicePieChart from '@components/charts/DevicePieChart';
+import TopSourcesBarChart from '@components/charts/TopSourcesBarChart';
+import TrafficLineChart from '@components/charts/TrafficLineChart';
+import AgencyClientTable from '@components/AgencyClientTable';
 
-import ShowChartIcon from "@mui/icons-material/ShowChart";
-import PageviewIcon from "@mui/icons-material/Pageview";
-import TouchAppIcon from "@mui/icons-material/TouchApp";
-import PersonIcon from "@mui/icons-material/Person";
-import { AgencyDeviceItem,AgencySourceItem, AgencyOverviewResponse } from "@types";
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import PageviewIcon from '@mui/icons-material/Pageview';
+import TouchAppIcon from '@mui/icons-material/TouchApp';
+import PersonIcon from '@mui/icons-material/Person';
+import { AgencyDeviceItem, AgencySourceItem, AgencyOverviewResponse } from '@types';
 
-// ---------- COMPONENT ----------
+const panelSx = {
+  p: 2.5,
+  bgcolor: 'background.paper',
+  borderRadius: 3,
+  border: '1px solid',
+  borderColor: 'divider'
+};
+
 export default function AgencyAnalyticsPage() {
-  const [range, setRange] = useState("last7");
-
-  const [selectedClientTrend, setSelectedClientTrend] = useState("all");
-  const [selectedClientDevice, setSelectedClientDevice] = useState("all");
-  const [selectedClientSources, setSelectedClientSources] = useState("all");
+  const [range, setRange] = useState('last7');
+  const [selectedClientTrend, setSelectedClientTrend] = useState('all');
+  const [selectedClientDevice, setSelectedClientDevice] = useState('all');
+  const [selectedClientSources, setSelectedClientSources] = useState('all');
 
   const { data, isLoading } = useGetAgencyOverviewQuery({ range });
 
-
-  // const summary = data?.summary || {};
-  const summary: AgencyOverviewResponse["summary"] =
-  data?.summary ?? {
-    total_clients: 0,
-    active_clients: 0,
-    pageviews: 0,
-    clicks: 0,
-    // add missing fields required by your shared version
-    initiated: 0,
-    inactive_clients: 0,
-    total_events: 0,
-  };
-
+  const summary: AgencyOverviewResponse['summary'] =
+    data?.summary ?? {
+      total_clients: 0,
+      active_clients: 0,
+      pageviews: 0,
+      clicks: 0,
+      initiated: 0,
+      inactive_clients: 0,
+      total_events: 0
+    };
 
   return (
     <Stack spacing={3}>
-      {/* TITLE */}
-      <Typography variant="h4" fontWeight={600}>
+      <Typography variant="h4" fontWeight={700}>
         Agency Analytics
       </Typography>
 
-      {/* RANGE DROPDOWN */}
       <FormControl size="small" sx={{ width: 200 }}>
         <Select value={range} onChange={(e) => setRange(e.target.value)}>
           <MenuItem value="today">Today</MenuItem>
@@ -68,63 +60,30 @@ export default function AgencyAnalyticsPage() {
         </Select>
       </FormControl>
 
-      {/* KPI CARDS */}
+      {isLoading ? <Typography color="text.secondary">Loading...</Typography> : null}
+
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard
-            title="Total Clients"
-            icon={PersonIcon}
-            color="#2065D1"
-            value={summary?.total_clients || 0}
-          />
+          <StatCard title="Total Clients" icon={PersonIcon} color="#1E88E5" value={summary.total_clients || 0} />
         </Grid>
-
         <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard
-            title="Active Clients (24h)"
-            icon={ShowChartIcon}
-            color="#1ABC9C"
-            value={summary?.active_clients || 0}
-          />
+          <StatCard title="Active Clients (24h)" icon={ShowChartIcon} color="#00C853" value={summary.active_clients || 0} />
         </Grid>
-
         <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard
-            title="PageViews"
-            icon={PageviewIcon}
-            color="#FF6B6B"
-            value={summary?.pageviews || 0}
-          />
+          <StatCard title="PageViews" icon={PageviewIcon} color="#F44336" value={summary.pageviews || 0} />
         </Grid>
-
         <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard
-            title="Clicks"
-            icon={TouchAppIcon}
-            color="#7E57C2"
-            value={summary?.clicks || 0}
-          />
+          <StatCard title="Clicks" icon={TouchAppIcon} color="#5E35B1" value={summary.clicks || 0} />
         </Grid>
       </Grid>
 
-      {/* ==================== CHARTS ==================== */}
       <Grid container spacing={2}>
-        {/* DAILY TRAFFIC TREND */}
         <Grid size={{ xs: 12, md: 8 }}>
-          <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2 }}>
-            <Stack
-              direction="row"
-              alignItems="center"
-              spacing={2}
-              sx={{ mb: 2 }}
-            >
+          <Box sx={panelSx}>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
               <Typography variant="h6">Daily Traffic Trend</Typography>
-
               <FormControl size="small" sx={{ minWidth: 160 }}>
-                <Select
-                  value={selectedClientTrend}
-                  onChange={(e) => setSelectedClientTrend(e.target.value)}
-                >
+                <Select value={selectedClientTrend} onChange={(e) => setSelectedClientTrend(e.target.value)}>
                   <MenuItem value="all">All Clients</MenuItem>
                   {data?.clients?.map((c) => (
                     <MenuItem key={c.client_id} value={c.client_id}>
@@ -137,44 +96,23 @@ export default function AgencyAnalyticsPage() {
 
             <TrafficLineChart
               data={
-                selectedClientTrend === "all"
-                  ? data?.daily || []
-                  : data?.clients_daily?.[Number(selectedClientTrend)] || []
-
+                selectedClientTrend === 'all' ? data?.daily || [] : data?.clients_daily?.[Number(selectedClientTrend)] || []
               }
             />
           </Box>
         </Grid>
 
-        {/* DEVICE BREAKDOWN */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Box
-            sx={{
-              p: 2,
-              bgcolor: "background.paper",
-              borderRadius: 2,
-              position: "relative",
-            }}
-          >
+          <Box sx={{ ...panelSx, position: 'relative' }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Device Breakdown
             </Typography>
 
             <FormControl
               size="small"
-              sx={{
-                position: "absolute",
-                top: 8,
-                right: 16,
-                zIndex: 10,
-                background: "white",
-                minWidth: 160,
-              }}
+              sx={{ position: 'absolute', top: 14, right: 16, zIndex: 10, minWidth: 140, bgcolor: 'background.paper' }}
             >
-              <Select
-                value={selectedClientDevice}
-                onChange={(e) => setSelectedClientDevice(e.target.value)}
-              >
+              <Select value={selectedClientDevice} onChange={(e) => setSelectedClientDevice(e.target.value)}>
                 <MenuItem value="all">All Clients</MenuItem>
                 {data?.clients?.map((c) => (
                   <MenuItem key={c.client_id} value={c.client_id}>
@@ -186,12 +124,11 @@ export default function AgencyAnalyticsPage() {
 
             <DevicePieChart
               data={
-                (selectedClientDevice === "all"
+                (selectedClientDevice === 'all'
                   ? data?.device_breakdown
-                  : data?.clients_device_breakdown?.[Number(selectedClientDevice)]
-                )?.map((d: AgencyDeviceItem) => ({
+                  : data?.clients_device_breakdown?.[Number(selectedClientDevice)])?.map((d: AgencyDeviceItem) => ({
                   name: d.name,
-                  count: d.count,
+                  count: d.count
                 })) || []
               }
             />
@@ -199,37 +136,18 @@ export default function AgencyAnalyticsPage() {
         </Grid>
       </Grid>
 
-      {/* ==================== SOURCES + CLIENT TABLE ==================== */}
       <Grid container spacing={2}>
-        {/* TOP SOURCES */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Box
-            sx={{
-              p: 2,
-              bgcolor: "background.paper",
-              borderRadius: 2,
-              position: "relative",
-            }}
-          >
+          <Box sx={{ ...panelSx, position: 'relative' }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Top Traffic Sources
             </Typography>
 
             <FormControl
               size="small"
-              sx={{
-                position: "absolute",
-                top: 8,
-                right: 16,
-                zIndex: 10,
-                background: "white",
-                minWidth: 160,
-              }}
+              sx={{ position: 'absolute', top: 14, right: 16, zIndex: 10, minWidth: 140, bgcolor: 'background.paper' }}
             >
-              <Select
-                value={selectedClientSources}
-                onChange={(e) => setSelectedClientSources(e.target.value)}
-              >
+              <Select value={selectedClientSources} onChange={(e) => setSelectedClientSources(e.target.value)}>
                 <MenuItem value="all">All Clients</MenuItem>
                 {data?.clients?.map((c) => (
                   <MenuItem key={c.client_id} value={c.client_id}>
@@ -241,21 +159,19 @@ export default function AgencyAnalyticsPage() {
 
             <TopSourcesBarChart
               data={
-                (selectedClientSources === "all"
+                (selectedClientSources === 'all'
                   ? data?.traffic_sources
-                  : data?.clients_traffic_sources?.[Number(selectedClientSources)]
-                )?.map((d: AgencySourceItem) => ({
+                  : data?.clients_traffic_sources?.[Number(selectedClientSources)])?.map((d: AgencySourceItem) => ({
                   src: d.src,
-                  count: d.count,
+                  count: d.count
                 })) || []
               }
             />
           </Box>
         </Grid>
 
-        {/* CLIENT TABLE */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2 }}>
+          <Box sx={panelSx}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Client Traffic Distribution
             </Typography>
