@@ -199,7 +199,7 @@ export default function SourcesPage() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 4 }}>
-          <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2 }}>
+          <Box sx={panelSx}>
             <Typography variant="h6" sx={{ mb: 1.5 }}>
               Top Sources
             </Typography>
@@ -208,7 +208,7 @@ export default function SourcesPage() {
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
-          <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2 }}>
+          <Box sx={panelSx}>
             <Typography variant="h6" sx={{ mb: 1.5 }}>
               Top Mediums
             </Typography>
@@ -217,7 +217,7 @@ export default function SourcesPage() {
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
-          <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2 }}>
+          <Box sx={panelSx}>
             <Typography variant="h6" sx={{ mb: 1.5 }}>
               Top Referrers
             </Typography>

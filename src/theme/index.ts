@@ -1,67 +1,90 @@
-// src/theme/index.ts
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
-import { pink } from '@mui/material/colors'; // MUI's magenta-like palette
 
 let theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: pink[500],       // 💜 Magenta base color
-      light: pink[300],
-      dark: pink[700],
-      contrastText: '#fff',
+      main: '#5E35B1',
+      light: '#7E57C2',
+      dark: '#4527A0',
+      contrastText: '#FFFFFF'
     },
     secondary: {
-      main: '#6A1B9A',       // Deep purple accent
+      main: '#1E88E5'
+    },
+    success: {
+      main: '#2E7D32'
+    },
+    warning: {
+      main: '#F9A825'
+    },
+    error: {
+      main: '#D32F2F'
     },
     background: {
-      default: '#F9FAFB',
-      paper: '#FFFFFF',
+      default: '#E9EEF3',
+      paper: '#FFFFFF'
     },
     text: {
-      primary: '#212B36',
-      secondary: '#6A1B9A',  // Slight magenta tint for secondary text
+      primary: '#111936',
+      secondary: '#6B778C'
     },
+    divider: '#DDE3EA'
   },
   shape: { borderRadius: 12 },
   typography: {
-    fontFamily: 'Inter, system-ui, Roboto, Arial',
-    h4: { fontWeight: 700, color: pink[700] },
-    h5: { fontWeight: 600, color: pink[700] },
-    button: { textTransform: 'none', fontWeight: 600 },
+    fontSize: 14,
+    fontFamily: 'Roboto, sans-serif',
+    h4: { fontWeight: 700, fontSize: '1.7rem', letterSpacing: 0.1 },
+    h5: { fontWeight: 700, fontSize: '1.45rem', letterSpacing: 0.1 },
+    h6: { fontWeight: 600, fontSize: '1.08rem', letterSpacing: 0.1 },
+    subtitle1: { fontWeight: 500, fontSize: '1rem' },
+    subtitle2: { fontWeight: 500, fontSize: '0.92rem' },
+    body1: { fontSize: '0.98rem' },
+    body2: { fontSize: '0.9rem', color: '#6B778C' },
+    button: { textTransform: 'none', fontWeight: 500 }
   },
   components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          boxShadow: 'none'
+        }
+      }
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          boxShadow: 'none',
+          border: '1px solid #E5EAF1'
+        }
+      }
+    },
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 8,
-          textTransform: 'none',
-          fontWeight: 600,
-        },
-        containedPrimary: {
-          backgroundColor: pink[500],
-          color: '#fff',
-          '&:hover': { backgroundColor: pink[700] },
-        },
-        outlinedPrimary: {
-          borderColor: pink[500],
-          color: pink[700],
-          '&:hover': {
-            borderColor: pink[700],
-            backgroundColor: pink[50],
-          },
-        },
-      },
+          borderRadius: 8
+        }
+      }
     },
-    MuiLink: {
+    MuiAppBar: {
       styleOverrides: {
         root: {
-          color: pink[600],
-          '&:hover': { textDecoration: 'underline' },
-        },
-      },
+          boxShadow: 'none'
+        }
+      }
     },
-  },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          borderRadius: 10,
+          backgroundColor: '#FFFFFF'
+        }
+      }
+    }
+  }
 });
 
 theme = responsiveFontSizes(theme);
