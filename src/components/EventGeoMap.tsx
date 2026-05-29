@@ -1,40 +1,40 @@
-// src/components/EventGeoMap.tsx
-import 'leaflet/dist/leaflet.css';
+import "leaflet/dist/leaflet.css";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
-import { useMemo } from "react";
-
-// ---------- Types ----------
-export interface GeoMarker {
-  geo_latitude: number;
-  geo_longitude: number;
-  geo_city?: string;
-  count?: number;
-}
+import { useEffect } from "react";
+import { useMap } from "react-leaflet";
+import { GeoMetric, GeoSummaryLocation } from "@services/geoSummaryApi";
 
 interface EventGeoMapProps {
-  // make it lenient so it won't crash if wrong shape comes in
-  markers?: GeoMarker[] | any;
+  markers?: GeoSummaryLocation[];
+  metric?: GeoMetric;
 }
 
-// ---------- Fix Leaflet default icon ----------
+const SRI_LANKA_CENTER: [number, number] = [7.8731, 80.7718];
+const SRI_LANKA_ZOOM = 7;
+
+function ResetToSriLanka({ resetKey }: { resetKey: string }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(SRI_LANKA_CENTER, SRI_LANKA_ZOOM, { animate: false });
+  }, [map, resetKey]);
+
+  return null;
+}
+
 const DefaultIcon = L.Icon.Default as any;
 delete DefaultIcon.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// ---------- Component ----------
-export default function EventGeoMap({ markers }: EventGeoMapProps) {
-  // 1) Normalize to a REAL array
-  const safeMarkers: GeoMarker[] = Array.isArray(markers)
+export default function EventGeoMap({ markers, metric = "events" }: EventGeoMapProps) {
+  const safeMarkers: GeoSummaryLocation[] = Array.isArray(markers)
     ? markers.filter(
         (m) =>
           m &&
@@ -43,37 +43,32 @@ export default function EventGeoMap({ markers }: EventGeoMapProps) {
       )
     : [];
 
-  // 2) Auto center to first valid marker, else Sri Lanka
-  const center: [number, number] = useMemo(() => {
-    if (safeMarkers.length > 0) {
-      return [
-        safeMarkers[0].geo_latitude,
-        safeMarkers[0].geo_longitude,
-      ];
-    }
-    return [7.8731, 80.7718]; // fallback center (Sri Lanka)
-  }, [safeMarkers]);
-
-  // 3) Debug (optional – keep while testing)
-  console.log("EventGeoMap safeMarkers =", safeMarkers);
+  const resetKey = `${metric}-${safeMarkers.length}`;
 
   return (
     <MapContainer
-      center={center}
-      zoom={safeMarkers.length > 0 ? 6 : 7}
+      center={SRI_LANKA_CENTER}
+      zoom={SRI_LANKA_ZOOM}
       style={{ height: "500px", width: "100%" }}
     >
+      <ResetToSriLanka resetKey={resetKey} />
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
       {safeMarkers.map((m, i) => (
-        <Marker
-          key={i}
-          position={[m.geo_latitude, m.geo_longitude]}
-        >
+        <Marker key={i} position={[m.geo_latitude as number, m.geo_longitude as number]}>
           <Popup>
-            <strong>{m.geo_city || "Unknown city"}</strong>
+            <strong>{m.geo_country || "Unknown Country"}</strong>
             <br />
-            {m.count ?? 0} visits
+            Region: {m.geo_region || "N/A"}
+            <br />
+            {m.geo_city ? (
+              <>
+                City: {m.geo_city}
+                <br />
+              </>
+            ) : null}
+            {metric === "unique_visitors"
+              ? `Unique Visitors: ${m.count ?? m.unique_visitors_count ?? 0}`
+              : `Events: ${m.count ?? m.events_count ?? 0}`}
           </Popup>
         </Marker>
       ))}

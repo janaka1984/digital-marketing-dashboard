@@ -1,5 +1,6 @@
 import { apiBase } from "./apiBase";
 import { AgencyOverviewResponse } from "../types/agency";
+import { buildGeoSummaryQuery, GeoSummaryFilters, GeoSummaryResponse } from "./geoSummaryApi";
 
 export const dashboardApi = apiBase.injectEndpoints({
   endpoints: (build) => ({
@@ -49,20 +50,8 @@ export const dashboardApi = apiBase.injectEndpoints({
     }),
 
     // Geo summary for map
-    getEventsGeoSummary: build.query({
-      query: (params: any = {}) => {
-        const { range, client_id } = params;
-
-        let url = `tracking/events-geo-summary/`;
-
-        const search = [];
-        if (range) search.push(`range=${range}`);
-        if (client_id) search.push(`client_id=${client_id}`);
-
-        if (search.length > 0) url += `?${search.join("&")}`;
-
-        return url;
-      },
+    getEventsGeoSummary: build.query<GeoSummaryResponse, Partial<GeoSummaryFilters>>({
+      query: (params = {}) => buildGeoSummaryQuery(params),
     }),
 
   }),
