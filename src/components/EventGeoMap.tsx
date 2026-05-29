@@ -2,11 +2,26 @@ import "leaflet/dist/leaflet.css";
 
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
+import { useEffect } from "react";
+import { useMap } from "react-leaflet";
 import { GeoMetric, GeoSummaryLocation } from "@services/geoSummaryApi";
 
 interface EventGeoMapProps {
   markers?: GeoSummaryLocation[];
   metric?: GeoMetric;
+}
+
+const SRI_LANKA_CENTER: [number, number] = [7.8731, 80.7718];
+const SRI_LANKA_ZOOM = 7;
+
+function ResetToSriLanka({ resetKey }: { resetKey: string }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(SRI_LANKA_CENTER, SRI_LANKA_ZOOM, { animate: false });
+  }, [map, resetKey]);
+
+  return null;
 }
 
 const DefaultIcon = L.Icon.Default as any;
@@ -28,14 +43,15 @@ export default function EventGeoMap({ markers, metric = "events" }: EventGeoMapP
       )
     : [];
 
-  const sriLankaCenter: [number, number] = [7.8731, 80.7718];
+  const resetKey = `${metric}-${safeMarkers.length}`;
 
   return (
     <MapContainer
-      center={sriLankaCenter}
-      zoom={7}
+      center={SRI_LANKA_CENTER}
+      zoom={SRI_LANKA_ZOOM}
       style={{ height: "500px", width: "100%" }}
     >
+      <ResetToSriLanka resetKey={resetKey} />
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       {safeMarkers.map((m, i) => (
         <Marker key={i} position={[m.geo_latitude as number, m.geo_longitude as number]}>
