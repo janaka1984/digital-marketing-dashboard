@@ -18,6 +18,7 @@ import { useTheme } from '@mui/material/styles';
 
 const DRAWER_WIDTH = 280;
 const MINI_DRAWER_WIDTH = 88;
+const HEADER_HEIGHT = 78;
 
 export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,6 +35,7 @@ export default function DashboardLayout() {
         position="fixed"
         sx={{
           zIndex: (muiTheme) => muiTheme.zIndex.drawer + 1,
+          height: HEADER_HEIGHT,
           bgcolor: 'background.paper',
           color: 'text.primary',
           borderBottom: '1px solid',
@@ -43,14 +45,14 @@ export default function DashboardLayout() {
           transition: 'all 0.2s ease'
         }}
       >
-        <Toolbar sx={{ minHeight: 78, gap: 2 }}>
+        <Toolbar sx={{ height: '100%', minHeight: '0 !important', gap: 2, px: { xs: 1.5, md: 2.5 } }}>
           <IconButton
             onClick={() => (isDesktop ? setCollapsed((v) => !v) : setMobileOpen((v) => !v))}
             size="large"
             edge="start"
             sx={{
               bgcolor: theme.palette.mode === 'dark' ? 'rgba(100,181,246,0.18)' : 'rgba(94,53,177,0.12)',
-              borderRadius: 2,
+              borderRadius: 0,
               color: 'text.primary',
               '&:hover': {
                 bgcolor: theme.palette.mode === 'dark' ? 'rgba(100,181,246,0.28)' : 'rgba(94,53,177,0.2)'
@@ -64,7 +66,7 @@ export default function DashboardLayout() {
               sx={{
                 bgcolor: theme.palette.mode === 'dark' ? 'rgba(100,181,246,0.18)' : '#EAF4FF',
                 color: 'text.primary',
-                borderRadius: 2
+                borderRadius: 0
               }}
               onClick={toggleColorMode}
             >
@@ -130,6 +132,8 @@ export default function DashboardLayout() {
           '& .MuiDrawer-paper': {
             width: currentDrawerWidth,
             boxSizing: 'border-box',
+            height: '100vh',
+            top: 0,
             borderRight: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.paper',
@@ -146,7 +150,7 @@ export default function DashboardLayout() {
         sx={{
           flexGrow: 1,
           p: { xs: 2, md: 3 },
-          mt: '78px',
+          mt: `${HEADER_HEIGHT}px`,
           transition: 'all 0.2s ease'
         }}
       >

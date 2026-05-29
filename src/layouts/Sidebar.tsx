@@ -7,7 +7,6 @@ import {
   Typography,
   Box,
   Button,
-  Stack,
   Tooltip
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -67,21 +66,31 @@ export default function Sidebar({ collapsed = false, onNavigate }: SidebarProps)
 
   return (
     <Box display="flex" flexDirection="column" height="100%" bgcolor="background.paper">
-      <Stack spacing={0.5} sx={{ px: collapsed ? 1.25 : 2.5, pt: 2.5, pb: 2, alignItems: collapsed ? 'center' : 'flex-start' }}>
+      <Box
+        sx={{
+          height: 78,
+          boxSizing: 'border-box',
+          px: collapsed ? 1 : 2.5,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          borderBottom: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
         <Typography
           variant="h5"
           sx={{
-            fontSize: collapsed ? '1.2rem' : '2rem',
+            fontSize: collapsed ? '1.25rem' : '2rem',
             fontWeight: 700,
             color: 'text.primary',
-            letterSpacing: 0.3
+            letterSpacing: 0.3,
+            lineHeight: 1
           }}
         >
           {collapsed ? 'A' : 'ADFLUX'}
         </Typography>
-      </Stack>
-
-      <Divider />
+      </Box>
 
       <Box flexGrow={1} sx={{ px: collapsed ? 0.75 : 1.25, py: 1.5 }}>
         {!collapsed ? (
