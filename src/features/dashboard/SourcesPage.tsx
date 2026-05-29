@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { useAppSelector } from "@store/hooks";
-import { useGetDashboardCampaignsQuery, useGetDashboardOverviewQuery } from "@services/dashboardApi";
+import { useGetDashboardOverviewQuery } from "@services/dashboardApi";
 import { GEO_GROUP_BY_OPTIONS, GEO_METRIC_OPTIONS, GEO_RANGE_OPTIONS } from "@services/geoSummaryApi";
 import TopSourcesBarChart from "@components/charts/TopSourcesBarChart";
 import EventGeoMap from "@components/EventGeoMap";
@@ -31,28 +31,20 @@ export default function SourcesPage() {
   const user = useAppSelector((s) => s.auth.user);
   const role = user?.role || "client";
   const { filters, setFilter, clearFilters } = useGeoFilters();
-  const { data: geoData, locations, filterOptions, isFetching: isGeoFetching } = useGeoSummary(filters);
+  const geoFilters = {
+    ...filters,
+    client_id: role === "agency" ? filters.client_id : undefined,
+  };
+  const { locations, filterOptions, isFetching: isGeoFetching } = useGeoSummary(geoFilters);
 
   const { data: overview, isFetching: isOverviewFetching } = useGetDashboardOverviewQuery({
     range: filters.range,
   });
-  const { data: campaignsData } = useGetDashboardCampaignsQuery({ range: filters.range });
 
   const sources = overview?.top_sources || [];
   const mediums = overview?.top_mediums || [];
   const referrers = overview?.referrers || [];
-  const campaignOptionsFromDashboard = Array.from(
-    new Set(
-      (campaignsData?.campaigns || [])
-        .map((c: any) =>
-          (c?.utm_campaign || c?.payload__utm_campaign || "").toString().trim()
-        )
-        .filter(Boolean)
-    )
-  ) as string[];
-  const campaignOptions = Array.from(
-    new Set([...(filterOptions?.campaigns || []), ...campaignOptionsFromDashboard])
-  );
+  const campaignOptions = filterOptions?.campaigns || [];
   const isLoading = isOverviewFetching || isGeoFetching;
 
   return (
@@ -182,6 +174,29 @@ export default function SourcesPage() {
         ) : null}
       </Box>
 
+      <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2, mt: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1.5 }}>
+          Visitor Locations (Map)
+        </Typography>
+
+        {!isGeoFetching && locations.length === 0 ? (
+          <Box
+            sx={{
+              height: 220,
+              borderRadius: 2,
+              bgcolor: "action.hover",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Typography color="text.secondary">No map data for selected filters</Typography>
+          </Box>
+        ) : (
+          <EventGeoMap markers={locations} metric={filters.metric} />
+        )}
+      </Box>
+
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 4 }}>
           <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2 }}>
@@ -210,29 +225,6 @@ export default function SourcesPage() {
           </Box>
         </Grid>
       </Grid>
-
-      <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 2, mt: 3 }}>
-        <Typography variant="h6" sx={{ mb: 1.5 }}>
-          Visitor Locations (Map)
-        </Typography>
-
-        {!isGeoFetching && locations.length === 0 ? (
-          <Box
-            sx={{
-              height: 220,
-              borderRadius: 2,
-              bgcolor: "action.hover",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Typography color="text.secondary">No map data for selected filters</Typography>
-          </Box>
-        ) : (
-          <EventGeoMap markers={locations} metric={filters.metric} />
-        )}
-      </Box>
     </Stack>
   );
 }

@@ -2,7 +2,6 @@ import "leaflet/dist/leaflet.css";
 
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import L from "leaflet";
-import { useMemo } from "react";
 import { GeoMetric, GeoSummaryLocation } from "@services/geoSummaryApi";
 
 interface EventGeoMapProps {
@@ -29,17 +28,12 @@ export default function EventGeoMap({ markers, metric = "events" }: EventGeoMapP
       )
     : [];
 
-  const center: [number, number] = useMemo(() => {
-    if (safeMarkers.length > 0) {
-      return [safeMarkers[0].geo_latitude as number, safeMarkers[0].geo_longitude as number];
-    }
-    return [7.8731, 80.7718];
-  }, [safeMarkers]);
+  const sriLankaCenter: [number, number] = [7.8731, 80.7718];
 
   return (
     <MapContainer
-      center={center}
-      zoom={safeMarkers.length > 0 ? 6 : 7}
+      center={sriLankaCenter}
+      zoom={7}
       style={{ height: "500px", width: "100%" }}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

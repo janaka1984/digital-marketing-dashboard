@@ -1,5 +1,4 @@
-import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
 import {
   GEO_GROUP_BY_OPTIONS,
   GEO_METRIC_OPTIONS,
@@ -16,8 +15,12 @@ export type UseGeoFiltersResult = {
     campaign: string;
     metric: GeoMetric;
     group_by: GeoGroupBy;
+    client_id?: number;
   };
-  setFilter: (key: "range" | "region" | "campaign" | "metric" | "group_by", value: string) => void;
+  setFilter: (
+    key: "range" | "region" | "campaign" | "metric" | "group_by" | "client_id",
+    value: string
+  ) => void;
   clearFilters: () => void;
 };
 
@@ -34,14 +37,16 @@ const VALID_METRICS = new Set<string>(GEO_METRIC_OPTIONS);
 const VALID_GROUP_BY = new Set<string>(GEO_GROUP_BY_OPTIONS);
 
 export function useGeoFilters(): UseGeoFiltersResult {
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const filters = useMemo(() => {
-    const rangeRaw = searchParams.get("range") || DEFAULT_FILTERS.range;
-    const regionRaw = (searchParams.get("region") || searchParams.get("district") || "").trim();
-    const campaignRaw = (searchParams.get("campaign") || "").trim();
-    const metricRaw = searchParams.get("metric") || DEFAULT_FILTERS.metric;
-    const groupByRaw = searchParams.get("group_by") || DEFAULT_FILTERS.group_by;
+  const initialFilters = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const rangeRaw = params.get("range") || DEFAULT_FILTERS.range;
+    const regionRaw = (params.get("region") || params.get("district") || "").trim();
+    const campaignRaw = (params.get("campaign") || "").trim();
+    const metricRaw = params.get("metric") || DEFAULT_FILTERS.metric;
+    const groupByRaw = params.get("group_by") || DEFAULT_FILTERS.group_by;
+    const clientIdRaw = params.get("client_id") || params.get("client") || "";
+    const parsedClientId = Number(clientIdRaw);
+    const client_id = Number.isFinite(parsedClientId) && parsedClientId > 0 ? parsedClientId : undefined;
 
     return {
       range: (VALID_RANGES.has(rangeRaw) ? rangeRaw : DEFAULT_FILTERS.range) as GeoRange,
@@ -49,28 +54,33 @@ export function useGeoFilters(): UseGeoFiltersResult {
       campaign: campaignRaw,
       metric: (VALID_METRICS.has(metricRaw) ? metricRaw : DEFAULT_FILTERS.metric) as GeoMetric,
       group_by: (VALID_GROUP_BY.has(groupByRaw) ? groupByRaw : DEFAULT_FILTERS.group_by) as GeoGroupBy,
+      client_id,
     };
-  }, [searchParams]);
+  }, []);
+
+  const [filters, setFilters] = useState(initialFilters);
 
   const setFilter: UseGeoFiltersResult["setFilter"] = (key, value) => {
-    const next = new URLSearchParams(searchParams);
-    if (value) next.set(key, value);
-    else next.delete(key);
-
-    // Normalize legacy alias to canonical key for all new updates.
-    next.delete("district");
-    setSearchParams(next, { replace: true });
+    setFilters((prev) => {
+      if (key === "client_id") {
+        const parsed = Number(value);
+        return {
+          ...prev,
+          client_id: Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+        };
+      }
+      return {
+        ...prev,
+        [key]: value,
+      };
+    });
   };
 
   const clearFilters = () => {
-    const next = new URLSearchParams(searchParams);
-    next.set("range", DEFAULT_FILTERS.range);
-    next.set("metric", DEFAULT_FILTERS.metric);
-    next.set("group_by", DEFAULT_FILTERS.group_by);
-    next.delete("region");
-    next.delete("district");
-    next.delete("campaign");
-    setSearchParams(next, { replace: true });
+    setFilters((prev) => ({
+      ...DEFAULT_FILTERS,
+      client_id: prev.client_id,
+    }));
   };
 
   return { filters, setFilter, clearFilters };

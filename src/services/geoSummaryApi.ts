@@ -20,6 +20,7 @@ export type GeoSummaryFilters = {
   campaign: string;
   metric: GeoMetric;
   group_by: GeoGroupBy;
+  client_id?: number;
 };
 
 export type GeoSummaryLocation = {
@@ -48,6 +49,7 @@ export type GeoSummaryResponse = {
   filter_options: {
     districts: string[];
     campaigns: string[];
+    sources?: string[];
     metrics: GeoMetric[];
     group_by: GeoGroupBy[];
   };
@@ -56,22 +58,13 @@ export type GeoSummaryResponse = {
 export function buildGeoSummaryQuery(params: Partial<GeoSummaryFilters>) {
   const search = new URLSearchParams();
 
-  if (params.range) {
-    search.set("range", params.range);
-    search.set("date_range", params.range);
-  }
-  if (params.region) {
-    search.set("region", params.region);
-    search.set("district", params.region);
-  }
+  if (params.range) search.set("range", params.range);
+  if (params.region) search.set("region", params.region);
   if (params.campaign) search.set("campaign", params.campaign);
-  if (params.metric) {
-    search.set("metric", params.metric);
-    search.set("metric_type", params.metric);
-  }
-  if (params.group_by) {
-    search.set("group_by", params.group_by);
-    search.set("groupBy", params.group_by);
+  if (params.metric) search.set("metric", params.metric);
+  if (params.group_by) search.set("group_by", params.group_by);
+  if (params.client_id != null && Number.isFinite(Number(params.client_id))) {
+    search.set("client_id", String(params.client_id));
   }
 
   const query = search.toString();
