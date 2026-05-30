@@ -27,6 +27,12 @@ const RANGE_LABELS: Record<string, string> = {
   thisyear: "This Year",
 };
 
+const panelSx = {
+  p: 2,
+  bgcolor: "background.paper",
+  borderRadius: 2,
+};
+
 export default function SourcesPage() {
   const user = useAppSelector((s) => s.auth.user);
   const role = user?.role || "client";

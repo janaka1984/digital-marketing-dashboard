@@ -21,6 +21,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { signOut } from '@features/auth/authSlice';
+import { useTheme } from '@mui/material/styles';
 
 type SidebarProps = {
   collapsed?: boolean;
@@ -32,6 +33,8 @@ export default function Sidebar({ collapsed = false, onNavigate }: SidebarProps)
   const { pathname } = useLocation();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   const role = user?.role || 'client';
 
@@ -66,36 +69,8 @@ export default function Sidebar({ collapsed = false, onNavigate }: SidebarProps)
 
   return (
     <Box display="flex" flexDirection="column" height="100%" bgcolor="background.paper">
-      <Box
-        sx={{
-          height: 78,
-          boxSizing: 'border-box',
-          px: collapsed ? 1 : 2.5,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          borderBottom: '1px solid',
-          borderColor: 'divider'
-        }}
-      >
-        <Typography
-          variant="h5"
-          sx={{
-            fontSize: collapsed ? '1.25rem' : '2rem',
-            fontWeight: 700,
-            color: 'text.primary',
-            letterSpacing: 0.3,
-            lineHeight: 1
-          }}
-        >
-          {collapsed ? 'A' : 'ADFLUX'}
-        </Typography>
-      </Box>
-
       <Box flexGrow={1} sx={{ px: collapsed ? 0.75 : 1.25, py: 1.5 }}>
-        {!collapsed ? (
-          <Typography sx={{ px: 1.25, pb: 1, color: 'text.primary', fontWeight: 600 }}>Dashboard</Typography>
-        ) : null}
+        
 
         <List sx={{ p: 0 }}>
           {menuItems.map((item) => {
@@ -119,10 +94,10 @@ export default function Sidebar({ collapsed = false, onNavigate }: SidebarProps)
                     color: active ? 'primary.main' : 'text.secondary'
                   },
                   '&.Mui-selected': {
-                    bgcolor: 'rgba(94,53,177,0.12)'
+                    bgcolor: isDark ? 'rgba(179,157,219,0.2)' : 'rgba(94,53,177,0.12)'
                   },
                   '&.Mui-selected:hover': {
-                    bgcolor: 'rgba(94,53,177,0.18)'
+                    bgcolor: isDark ? 'rgba(179,157,219,0.28)' : 'rgba(94,53,177,0.18)'
                   }
                 }}
               >
