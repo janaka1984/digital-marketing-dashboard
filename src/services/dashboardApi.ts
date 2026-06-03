@@ -30,11 +30,26 @@ export const dashboardApi = apiBase.injectEndpoints({
     // Campaigns (Page 2)
     getDashboardCampaigns: build.query({
       query: (params: any = {}) => {
-        const { range, days = 30 } = params;
+        const {
+          level = "campaign",
+          range,
+          days = 30,
+          platform,
+          status,
+          campaign_id,
+          adset_id,
+        } = params;
+        const queryParams = new URLSearchParams();
 
-        return range
-          ? `tracking/dashboard-campaigns/?range=${range}`
-          : `tracking/dashboard-campaigns/?days=${days}`;
+        queryParams.set("level", level);
+        if (range) queryParams.set("range", range);
+        else queryParams.set("days", String(days));
+        if (platform && platform !== "all") queryParams.set("platform", platform);
+        if (status) queryParams.set("status", status);
+        if (campaign_id) queryParams.set("campaign_id", String(campaign_id));
+        if (adset_id) queryParams.set("adset_id", String(adset_id));
+
+        return `tracking/dashboard-campaigns/?${queryParams.toString()}`;
       },
     }),
 
