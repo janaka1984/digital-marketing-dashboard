@@ -164,6 +164,9 @@ export default function DashboardLayout() {
         component="main"
         sx={{
           flexGrow: 1,
+          minWidth: 0,
+          maxWidth: '100%',
+          overflowX: 'hidden',
           p: { xs: 2, md: 3 },
           mt: `${HEADER_HEIGHT}px`,
           bgcolor: isDark ? '#0F172A' : '#EEF2F7',

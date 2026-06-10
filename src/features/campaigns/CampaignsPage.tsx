@@ -52,6 +52,13 @@ type CampaignRow = {
   revenue: number;
   roas: number;
   conversion_rate: number;
+  daily_budget: number;
+  lifetime_budget: number;
+  allocated_budget: number;
+  budget_type: string;
+  recommended_budget: number;
+  budget_recommendation: string;
+  budget_utilization: number;
   start_date: string;
   end_date: string;
   latest_at: string;
@@ -85,7 +92,20 @@ const numericFields: Array<keyof Pick<
   | "initiated"
   | "purchases"
   | "revenue"
->> = ["pageviews", "impressions", "reach", "clicks", "spend", "initiated", "purchases", "revenue"];
+  | "allocated_budget"
+  | "recommended_budget"
+>> = [
+  "pageviews",
+  "impressions",
+  "reach",
+  "clicks",
+  "spend",
+  "initiated",
+  "purchases",
+  "revenue",
+  "allocated_budget",
+  "recommended_budget",
+];
 
 const tableCellSx = {
   py: 1,
@@ -94,7 +114,7 @@ const tableCellSx = {
 };
 
 const panelSx = {
-  p: 2,
+  p: { xs: 1.5, sm: 2 },
   bgcolor: "background.paper",
   borderRadius: 2,
   boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
@@ -104,6 +124,14 @@ const numberValue = (value: unknown) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const numberWithFallback = (value: unknown, fallback: number) =>
+  value === undefined || value === null || value === "" ? fallback : numberValue(value);
+
+const budgetValue = (value: unknown) => numberValue(value) / 100;
+
+const budgetWithFallback = (value: unknown, fallback: number) =>
+  value === undefined || value === null || value === "" ? fallback : budgetValue(value);
 
 const readValue = (row: Record<string, any>, key: string): unknown =>
   key.split(".").reduce<unknown>(
@@ -126,8 +154,10 @@ const getApiRows = (data: any, level: CampaignLevel) => {
 };
 
 const startDateKeys = [
-  "start_date",
   "start",
+  "date_start",
+  "campaign_start",
+  "start_date",
   "start_time",
   "campaign_start_date",
   "campaign_start_time",
@@ -144,9 +174,12 @@ const startDateKeys = [
 ];
 
 const endDateKeys = [
-  "end_date",
   "end",
+  "date_stop",
+  "campaign_end",
+  "end_date",
   "end_time",
+  "date_end",
   "stop_date",
   "stop_time",
   "campaign_end_date",
@@ -221,6 +254,13 @@ const normalizeRow = (row: Record<string, any>, index: number, level: CampaignLe
     revenue: numberValue(row.revenue),
     roas: numberValue(row.roas),
     conversion_rate: numberValue(row.conversion_rate),
+    daily_budget: budgetValue(row.daily_budget),
+    lifetime_budget: budgetValue(row.lifetime_budget),
+    allocated_budget: budgetValue(row.allocated_budget),
+    budget_type: String(pick(row, ["budget_type"], "")),
+    recommended_budget: budgetValue(row.recommended_budget),
+    budget_recommendation: String(pick(row, ["budget_recommendation"], "")),
+    budget_utilization: numberValue(row.budget_utilization),
     start_date: String(pick(row, startDateKeys, "")),
     end_date: String(pick(row, endDateKeys, "")),
     latest_at: String(pick(row, latestDateKeys, "")),
@@ -249,6 +289,10 @@ const metricSignature = (row: CampaignRow) =>
     row.revenue,
     row.roas,
     row.conversion_rate,
+    row.allocated_budget,
+    row.recommended_budget,
+    row.budget_recommendation,
+    row.budget_utilization,
     row.start_date,
     row.end_date,
     row.latest_at,
@@ -299,9 +343,12 @@ const mergeRowsByLevel = (rows: CampaignRow[], level: CampaignLevel) => {
     existing.start_date = earliestDate(existing.start_date, row.start_date);
     existing.end_date = latestDate(existing.end_date, row.end_date);
     existing.latest_at = latestDate(existing.latest_at, row.latest_at);
+    existing.roas = row.roas || existing.roas;
+    existing.budget_utilization = row.budget_utilization || existing.budget_utilization;
+    existing.budget_recommendation = row.budget_recommendation || existing.budget_recommendation;
+    existing.budget_type = row.budget_type || existing.budget_type;
     existing.ctr = existing.impressions ? (existing.clicks / existing.impressions) * 100 : 0;
     existing.cpc = existing.clicks ? existing.spend / existing.clicks : 0;
-    existing.roas = existing.spend ? existing.revenue / existing.spend : 0;
     existing.conversion_rate = existing.pageviews ? (existing.purchases / existing.pageviews) * 100 : 0;
   });
 
@@ -328,7 +375,9 @@ const normalizeRows = (data: any, level: CampaignLevel) =>
     )
   );
 
-const totalRow = (rows: CampaignRow[], label = "Total"): CampaignRow => {
+const normalizeTotals = (data: any) => data?.totals || data?.total || data?.summary || null;
+
+const totalRow = (rows: CampaignRow[], label = "Total", backendTotals?: Record<string, any> | null): CampaignRow => {
   const totals = rows.reduce(
     (acc, row) => {
       numericFields.forEach((field) => {
@@ -345,8 +394,23 @@ const totalRow = (rows: CampaignRow[], label = "Total"): CampaignRow => {
       initiated: 0,
       purchases: 0,
       revenue: 0,
+      allocated_budget: 0,
+      recommended_budget: 0,
     } as Record<(typeof numericFields)[number], number>
   );
+
+  const resolvedTotals = {
+    pageviews: numberWithFallback(backendTotals?.pageviews, totals.pageviews),
+    impressions: numberWithFallback(backendTotals?.impressions, totals.impressions),
+    reach: numberWithFallback(backendTotals?.reach, totals.reach),
+    clicks: numberWithFallback(backendTotals?.clicks, totals.clicks),
+    spend: numberWithFallback(backendTotals?.spend, totals.spend),
+    initiated: numberWithFallback(backendTotals?.initiated, totals.initiated),
+    purchases: numberWithFallback(backendTotals?.purchases, totals.purchases),
+    revenue: numberWithFallback(backendTotals?.revenue, totals.revenue),
+    allocated_budget: budgetWithFallback(backendTotals?.allocated_budget, totals.allocated_budget),
+    recommended_budget: budgetWithFallback(backendTotals?.recommended_budget, totals.recommended_budget),
+  };
 
   return {
     id: "total-row",
@@ -354,11 +418,16 @@ const totalRow = (rows: CampaignRow[], label = "Total"): CampaignRow => {
     name: label,
     source: "",
     status: "",
-    ...totals,
-    ctr: totals.impressions ? (totals.clicks / totals.impressions) * 100 : 0,
-    cpc: totals.clicks ? totals.spend / totals.clicks : 0,
-    roas: totals.spend ? totals.revenue / totals.spend : 0,
-    conversion_rate: totals.pageviews ? (totals.purchases / totals.pageviews) * 100 : 0,
+    ...resolvedTotals,
+    ctr: resolvedTotals.impressions ? (resolvedTotals.clicks / resolvedTotals.impressions) * 100 : 0,
+    cpc: resolvedTotals.clicks ? resolvedTotals.spend / resolvedTotals.clicks : 0,
+    roas: numberValue(backendTotals?.roas),
+    conversion_rate: resolvedTotals.pageviews ? (resolvedTotals.purchases / resolvedTotals.pageviews) * 100 : 0,
+    daily_budget: 0,
+    lifetime_budget: 0,
+    budget_type: "",
+    budget_recommendation: String(pick(backendTotals || {}, ["budget_recommendation"], "")),
+    budget_utilization: numberValue(backendTotals?.budget_utilization),
     start_date: "",
     end_date: "",
     latest_at: "",
@@ -368,9 +437,22 @@ const totalRow = (rows: CampaignRow[], label = "Total"): CampaignRow => {
 
 const formatNumber = (value: number) => Math.round(value || 0).toLocaleString();
 const formatMoney = (value: number) =>
-  (value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  (value || 0).toLocaleString(undefined, {
+    style: "currency",
+    currency: "LKR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 const formatPercent = (value: number) => `${(value || 0).toFixed(2)}%`;
 const formatDecimal = (value: number) => (value || 0).toFixed(2);
+const formatRoas = (value: number) => `${formatDecimal(value)}x`;
+const formatBudgetUtilization = (value: number) => `${(value || 0).toFixed(1)}%`;
+const formatBudgetType = (value: string) => {
+  const normalized = value.toLowerCase();
+  if (normalized === "daily") return "Daily";
+  if (normalized === "lifetime") return "Lifetime";
+  return "-";
+};
 const formatDate = (value: string) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -403,6 +485,20 @@ function StatusBadge({ status }: { status: string }) {
   const label = normalized === "active" ? "Active" : normalized === "inactive" ? "Inactive" : status;
 
   return <Chip size="small" label={label} color={color} variant="outlined" sx={{ height: 22, fontSize: 11 }} />;
+}
+
+function RecommendationBadge({ recommendation }: { recommendation: string }) {
+  const normalized = recommendation.toLowerCase();
+  const config: Record<string, { label: string; color: "success" | "error" | "warning" | "default" }> = {
+    increase: { label: "Increase", color: "success" },
+    decrease: { label: "Decrease", color: "error" },
+    monitor: { label: "Monitor", color: "warning" },
+    maintain: { label: "Maintain", color: "default" },
+    no_budget: { label: "No Budget", color: "default" },
+  };
+  const badge = config[normalized] || { label: recommendation || "-", color: "default" as const };
+
+  return <Chip size="small" label={badge.label} color={badge.color} variant="outlined" sx={{ height: 22, fontSize: 11 }} />;
 }
 
 function DenseMetricTable({
@@ -467,7 +563,7 @@ function DenseMetricTable({
                   <TableCell sx={tableCellSx}>{formatMoney(row.spend)}</TableCell>
                   <TableCell sx={tableCellSx}>{formatNumber(row.purchases)}</TableCell>
                   <TableCell sx={tableCellSx}>{formatMoney(row.revenue)}</TableCell>
-                  <TableCell sx={tableCellSx}>{formatDecimal(row.roas)}</TableCell>
+                  <TableCell sx={tableCellSx}>{formatRoas(row.roas)}</TableCell>
                 </TableRow>
               ))}
 
@@ -548,8 +644,8 @@ export default function CampaignsPage() {
   const rows = useMemo(() => normalizeRows(currentData, mainLevel), [currentData, mainLevel]);
   const adsetRows = useMemo(() => normalizeRows(adsetsData, "adset"), [adsetsData]);
   const adRows = useMemo(() => normalizeRows(adsData, "ad"), [adsData]);
-  const drawerTotals = totalRow(selectedAdset ? adRows : adsetRows);
-  const mainTotals = useMemo(() => totalRow(rows), [rows]);
+  const drawerTotals = totalRow(selectedAdset ? adRows : adsetRows, "Total", normalizeTotals(selectedAdset ? adsData : adsetsData));
+  const mainTotals = useMemo(() => totalRow(rows, "Total", normalizeTotals(currentData)), [currentData, rows]);
   const resetSelections = () => {
     setSelectedCampaign(null);
     setSelectedAdset(null);
@@ -572,14 +668,43 @@ export default function CampaignsPage() {
     { field: "clicks", headerName: "Clicks", width: 90, valueFormatter: (value) => formatNumber(numberValue(value)) },
     { field: "ctr", headerName: "CTR", width: 85, valueFormatter: (value) => formatPercent(numberValue(value)) },
     { field: "cpc", headerName: "CPC", width: 85, valueFormatter: (value) => formatMoney(numberValue(value)) },
-    { field: "spend", headerName: "Spend", width: 100, valueFormatter: (value) => formatMoney(numberValue(value)) },
+    {
+      field: "allocated_budget",
+      headerName: "Allocated Budget",
+      width: 150,
+      valueFormatter: (value) => formatMoney(numberValue(value)),
+    },
+    {
+      field: "budget_type",
+      headerName: "Budget Type",
+      width: 120,
+      valueFormatter: (value) => formatBudgetType(String(value || "")),
+    },
+    { field: "spend", headerName: "Spend", width: 125, valueFormatter: (value) => formatMoney(numberValue(value)) },
     { field: "initiated", headerName: "Initiated", width: 105, valueFormatter: (value) => formatNumber(numberValue(value)) },
     { field: "purchases", headerName: "Purchases", width: 105, valueFormatter: (value) => formatNumber(numberValue(value)) },
-    { field: "revenue", headerName: "Revenue", width: 105, valueFormatter: (value) => formatMoney(numberValue(value)) },
-    { field: "roas", headerName: "ROAS", width: 85, valueFormatter: (value) => formatDecimal(numberValue(value)) },
+    { field: "revenue", headerName: "Revenue", width: 125, valueFormatter: (value) => formatMoney(numberValue(value)) },
+    { field: "roas", headerName: "ROAS", width: 85, valueFormatter: (value) => formatRoas(numberValue(value)) },
+    {
+      field: "recommended_budget",
+      headerName: "Recommended Budget",
+      width: 175,
+      valueFormatter: (value) => formatMoney(numberValue(value)),
+    },
+    {
+      field: "budget_recommendation",
+      headerName: "Recommendation",
+      width: 140,
+      renderCell: (params) => <RecommendationBadge recommendation={String(params.value || "")} />,
+    },
+    {
+      field: "budget_utilization",
+      headerName: "Budget Utilization",
+      width: 155,
+      valueFormatter: (value) => formatBudgetUtilization(numberValue(value)),
+    },
     { field: "conversion_rate", headerName: "Conv. Rate (%)", width: 130, valueFormatter: (value) => formatPercent(numberValue(value)) },
   ];
-
   const tableRows = rows;
 
   const openCampaign = (params: GridRowParams<CampaignRow>) => {
@@ -601,14 +726,14 @@ export default function CampaignsPage() {
   };
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ minWidth: 0, maxWidth: "100%", overflowX: "hidden" }}>
       <Typography variant="h4" fontWeight={600}>
         {role === "agency" ? "Client Campaign Overview" : "My Campaign Performance"}
       </Typography>
 
       <Box sx={panelSx}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} useFlexGap flexWrap="wrap" alignItems={{ md: "flex-end" }}>
-          <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 170 } }}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} useFlexGap flexWrap="wrap" alignItems={{ sm: "flex-end" }}>
+          <FormControl size="small" sx={{ flex: { xs: "1 1 100%", sm: "1 1 170px", lg: "0 0 170px" } }}>
             <Typography variant="caption" sx={{ mb: 0.5 }}>
               Date Range
             </Typography>
@@ -627,7 +752,7 @@ export default function CampaignsPage() {
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 160 } }}>
+          <FormControl size="small" sx={{ flex: { xs: "1 1 100%", sm: "1 1 160px", lg: "0 0 160px" } }}>
             <Typography variant="caption" sx={{ mb: 0.5 }}>
               Platform
             </Typography>
@@ -643,7 +768,7 @@ export default function CampaignsPage() {
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 160 } }}>
+          <FormControl size="small" sx={{ flex: { xs: "1 1 100%", sm: "1 1 160px", lg: "0 0 160px" } }}>
             <Typography variant="caption" sx={{ mb: 0.5 }}>
               Status
             </Typography>
@@ -660,7 +785,7 @@ export default function CampaignsPage() {
             </Select>
           </FormControl>
 
-          <Box sx={{ minWidth: { xs: "100%", md: 300 } }}>
+          <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 300px", lg: "0 0 300px" } }}>
             <Typography variant="caption" sx={{ mb: 0.5, display: "block" }}>
               Level
             </Typography>
@@ -683,7 +808,7 @@ export default function CampaignsPage() {
         </Stack>
       </Box>
 
-      <Paper sx={{ p: 2, borderRadius: 2 }}>
+      <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, overflow: "hidden", minWidth: 0 }}>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
           <Typography variant="h6">{levelLabels[mainLevel]}</Typography>
           <Typography variant="caption" color="text.secondary">
@@ -691,7 +816,23 @@ export default function CampaignsPage() {
           </Typography>
         </Stack>
 
-        <Box sx={{ width: "100%" }}>
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            overflowX: "auto",
+            overflowY: "hidden",
+            pb: 1,
+            "&::-webkit-scrollbar": {
+              height: 8,
+            },
+            "&::-webkit-scrollbar-thumb": {
+              bgcolor: "divider",
+              borderRadius: 999,
+            },
+          }}
+        >
           <DataGrid
             key={`${mainLevel}-${range}-${platform}-${status}`}
             rows={tableRows}
@@ -708,6 +849,9 @@ export default function CampaignsPage() {
             localeText={{ noRowsLabel: `No ${levelLabels[mainLevel].toLowerCase()} found` }}
             getRowClassName={(params) => (params.row.isTotal ? "total-row" : "")}
             sx={{
+              minWidth: 2200,
+              width: "max-content",
+              maxWidth: "none",
               border: "1px solid",
               borderColor: "divider",
               borderRadius: 2,
@@ -736,14 +880,15 @@ export default function CampaignsPage() {
               },
             }}
           />
+        </Box>
           {rows.length ? (
             <Stack
               direction="row"
-              spacing={2}
+              spacing={1}
               useFlexGap
               flexWrap="wrap"
               sx={{
-                px: 1.5,
+                px: { xs: 1, sm: 1.5 },
                 py: 1,
                 mt: 0.5,
                 bgcolor: "action.hover",
@@ -757,17 +902,35 @@ export default function CampaignsPage() {
                 ["Impressions", formatNumber(mainTotals.impressions)],
                 ["Reach", formatNumber(mainTotals.reach)],
                 ["Clicks", formatNumber(mainTotals.clicks)],
+                ["Allocated Budget", formatMoney(mainTotals.allocated_budget)],
                 ["Spend", formatMoney(mainTotals.spend)],
                 ["Revenue", formatMoney(mainTotals.revenue)],
-                ["ROAS", formatDecimal(mainTotals.roas)],
+                ["Recommended Budget", formatMoney(mainTotals.recommended_budget)],
+                ["ROAS", formatRoas(mainTotals.roas)],
+                ["Budget Utilization", formatBudgetUtilization(mainTotals.budget_utilization)],
               ].map(([label, value]) => (
-                <Typography key={label} variant="caption" sx={{ fontWeight: 700 }}>
-                  {label}: {value}
-                </Typography>
+                <Box
+                  key={label}
+                  sx={{
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                    bgcolor: "background.paper",
+                    border: "1px solid",
+                    borderColor: "divider",
+                    minWidth: { xs: "calc(50% - 4px)", sm: "auto" },
+                  }}
+                >
+                  <Typography variant="caption" sx={{ display: "block", color: "text.secondary", lineHeight: 1.2 }}>
+                    {label}
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: "block", fontWeight: 700, lineHeight: 1.3 }}>
+                    {value}
+                  </Typography>
+                </Box>
               ))}
             </Stack>
           ) : null}
-        </Box>
       </Paper>
 
       <Drawer
@@ -843,7 +1006,7 @@ export default function CampaignsPage() {
                   <MetricCard label="Initiated" value={formatNumber(selectedCampaign.initiated)} />
                   <MetricCard label="Purchases" value={formatNumber(selectedCampaign.purchases)} />
                   <MetricCard label="Revenue" value={formatMoney(selectedCampaign.revenue)} />
-                  <MetricCard label="ROAS" value={formatDecimal(selectedCampaign.roas)} />
+                  <MetricCard label="ROAS" value={formatRoas(selectedCampaign.roas)} />
                 </Box>
               ) : null}
 
@@ -875,7 +1038,7 @@ export default function CampaignsPage() {
                   Purchases: <strong>{formatNumber(drawerTotals.purchases)}</strong>
                 </Typography>
                 <Typography variant="caption">
-                  ROAS: <strong>{formatDecimal(drawerTotals.roas)}</strong>
+                  ROAS: <strong>{formatRoas(drawerTotals.roas)}</strong>
                 </Typography>
               </Stack>
             </Box>
