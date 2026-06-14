@@ -53,6 +53,28 @@ export const dashboardApi = apiBase.injectEndpoints({
       },
     }),
 
+    generateAiRecommendations: build.mutation({
+      query: (body: any) => ({
+        url: "ai-optimizer/recommendations/generate/",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getAiRecommendations: build.query({
+      query: (params: any = {}) => {
+        const queryParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== "" && value !== "all") {
+            queryParams.set(key, String(value));
+          }
+        });
+
+        const queryString = queryParams.toString();
+        return `ai-optimizer/recommendations/${queryString ? `?${queryString}` : ""}`;
+      },
+    }),
+
     // Agency Overview (for agency users)
     getAgencyOverview: build.query<AgencyOverviewResponse, { range?: string; days?: number }>({
       query: (params: any = {}) => {
@@ -78,6 +100,8 @@ export const {
   useGetDashboardOverviewQuery,
   useGetDashboardFunnelQuery,
   useGetDashboardCampaignsQuery,
+  useGenerateAiRecommendationsMutation,
+  useGetAiRecommendationsQuery,
   useGetAgencyOverviewQuery,
   useGetEventsGeoSummaryQuery,
 } = dashboardApi;

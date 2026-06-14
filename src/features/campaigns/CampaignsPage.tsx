@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   Breadcrumbs,
   Chip,
   Drawer,
@@ -18,17 +19,23 @@ import {
   TableHead,
   TableRow,
   Tabs,
+  Tooltip,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CloseIcon from "@mui/icons-material/Close";
 import { useMemo, useState } from "react";
 import { GridColDef, GridRowParams } from "@mui/x-data-grid";
 import { DataGrid } from "@mui/x-data-grid";
-import { useGetDashboardCampaignsQuery } from "@services/dashboardApi";
+import {
+  useGenerateAiRecommendationsMutation,
+  useGetAiRecommendationsQuery,
+  useGetDashboardCampaignsQuery,
+} from "@services/dashboardApi";
 import { useAppSelector } from "@store/hooks";
 
 type CampaignLevel = "campaign" | "adset" | "ad";
@@ -57,6 +64,9 @@ type CampaignRow = {
   allocated_budget: number;
   budget_type: string;
   recommended_budget: number;
+  has_recommended_budget: boolean;
+  recommendation_action: string;
+  recommendation_detail: string;
   budget_recommendation: string;
   budget_utilization: number;
   start_date: string;
@@ -92,8 +102,6 @@ const numericFields: Array<keyof Pick<
   | "initiated"
   | "purchases"
   | "revenue"
-  | "allocated_budget"
-  | "recommended_budget"
 >> = [
   "pageviews",
   "impressions",
@@ -103,8 +111,6 @@ const numericFields: Array<keyof Pick<
   "initiated",
   "purchases",
   "revenue",
-  "allocated_budget",
-  "recommended_budget",
 ];
 
 const tableCellSx = {
@@ -128,10 +134,12 @@ const numberValue = (value: unknown) => {
 const numberWithFallback = (value: unknown, fallback: number) =>
   value === undefined || value === null || value === "" ? fallback : numberValue(value);
 
-const budgetValue = (value: unknown) => numberValue(value) / 100;
+const budgetValue = (value: unknown) => numberValue(value) / 10;
 
 const budgetWithFallback = (value: unknown, fallback: number) =>
   value === undefined || value === null || value === "" ? fallback : budgetValue(value);
+
+const hasValue = (value: unknown) => value !== undefined && value !== null && value !== "";
 
 const readValue = (row: Record<string, any>, key: string): unknown =>
   key.split(".").reduce<unknown>(
@@ -151,6 +159,14 @@ const getApiRows = (data: any, level: CampaignLevel) => {
   if (Array.isArray(data)) return data;
   const levelKey = level === "adset" ? "adsets" : level === "ad" ? "ads" : "campaigns";
   return data?.[levelKey] || data?.results || data?.rows || data?.data || data?.campaigns || [];
+};
+
+const getRecommendationRows = (data: any) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  if (Array.isArray(data?.recommendations)) return data.recommendations;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
 };
 
 const startDateKeys = [
@@ -216,6 +232,18 @@ const latestDateKeys = [
 const normalizeRow = (row: Record<string, any>, index: number, level: CampaignLevel): CampaignRow => {
   const campaignId = pick(row, ["campaign_id", "campaignId", "campaign.id", "campaign_id_meta", "id"]);
   const adsetId = pick(row, ["adset_id", "adsetId", "adset.id", "adset_id_meta", "id"]);
+  const allocatedBudgetRaw = pick(row, ["allocated_budget", "current_budget", "ai_recommendation.current_budget"], "");
+  const optimizerAction = pick(row, ["recommendation_action", "ai_recommendation.recommendation_action"], "");
+  const optimizerDetail = pick(row, ["recommendation_detail", "explanation", "ai_recommendation.explanation"], "");
+  const nestedRecommendedBudget = readValue(row, "ai_recommendation.recommended_budget");
+  const flatRecommendedBudget = readValue(row, "recommended_budget");
+  const hasOptimizerRecommendation =
+    hasValue(nestedRecommendedBudget) || hasValue(optimizerAction) || hasValue(optimizerDetail) || hasValue(readValue(row, "current_budget"));
+  const recommendedBudgetRaw = hasValue(nestedRecommendedBudget)
+    ? nestedRecommendedBudget
+    : hasOptimizerRecommendation
+      ? flatRecommendedBudget
+      : "";
   const name = String(
     pick(
       row,
@@ -256,9 +284,12 @@ const normalizeRow = (row: Record<string, any>, index: number, level: CampaignLe
     conversion_rate: numberValue(row.conversion_rate),
     daily_budget: budgetValue(row.daily_budget),
     lifetime_budget: budgetValue(row.lifetime_budget),
-    allocated_budget: budgetValue(row.allocated_budget),
+    allocated_budget: budgetValue(allocatedBudgetRaw),
     budget_type: String(pick(row, ["budget_type"], "")),
-    recommended_budget: budgetValue(row.recommended_budget),
+    recommended_budget: hasValue(recommendedBudgetRaw) ? budgetValue(recommendedBudgetRaw) : 0,
+    has_recommended_budget: hasValue(recommendedBudgetRaw),
+    recommendation_action: String(optimizerAction || ""),
+    recommendation_detail: String(optimizerDetail || ""),
     budget_recommendation: String(pick(row, ["budget_recommendation"], "")),
     budget_utilization: numberValue(row.budget_utilization),
     start_date: String(pick(row, startDateKeys, "")),
@@ -291,6 +322,9 @@ const metricSignature = (row: CampaignRow) =>
     row.conversion_rate,
     row.allocated_budget,
     row.recommended_budget,
+    row.has_recommended_budget,
+    row.recommendation_action,
+    row.recommendation_detail,
     row.budget_recommendation,
     row.budget_utilization,
     row.start_date,
@@ -340,13 +374,25 @@ const mergeRowsByLevel = (rows: CampaignRow[], level: CampaignLevel) => {
     numericFields.forEach((field) => {
       existing[field] += row[field] || 0;
     });
+    const rowIsNewer = latestTimestamp(row) >= latestTimestamp(existing);
+    if (rowIsNewer || !existing.allocated_budget) {
+      existing.allocated_budget = row.allocated_budget || existing.allocated_budget;
+      existing.daily_budget = row.daily_budget || existing.daily_budget;
+      existing.lifetime_budget = row.lifetime_budget || existing.lifetime_budget;
+      existing.budget_type = row.budget_type || existing.budget_type;
+    }
+    if (row.has_recommended_budget && (rowIsNewer || !existing.has_recommended_budget)) {
+      existing.recommended_budget = row.recommended_budget;
+      existing.has_recommended_budget = true;
+      existing.recommendation_action = row.recommendation_action || existing.recommendation_action;
+      existing.recommendation_detail = row.recommendation_detail || existing.recommendation_detail;
+      existing.budget_recommendation = row.budget_recommendation || existing.budget_recommendation;
+    }
     existing.start_date = earliestDate(existing.start_date, row.start_date);
     existing.end_date = latestDate(existing.end_date, row.end_date);
     existing.latest_at = latestDate(existing.latest_at, row.latest_at);
     existing.roas = row.roas || existing.roas;
     existing.budget_utilization = row.budget_utilization || existing.budget_utilization;
-    existing.budget_recommendation = row.budget_recommendation || existing.budget_recommendation;
-    existing.budget_type = row.budget_type || existing.budget_type;
     existing.ctr = existing.impressions ? (existing.clicks / existing.impressions) * 100 : 0;
     existing.cpc = existing.clicks ? existing.spend / existing.clicks : 0;
     existing.conversion_rate = existing.pageviews ? (existing.purchases / existing.pageviews) * 100 : 0;
@@ -375,6 +421,54 @@ const normalizeRows = (data: any, level: CampaignLevel) =>
     )
   );
 
+const recommendationTimestamp = (row: Record<string, any>) => {
+  const value = String(pick(row, ["updated_at", "created_at"], ""));
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const buildRecommendationMap = (data: any, level: CampaignLevel) => {
+  const map = new Map<string, Record<string, any>>();
+
+  getRecommendationRows(data).forEach((row: Record<string, any>) => {
+    const entityType = String(pick(row, ["entity_type", "level"], level)).toLowerCase();
+    const entityId = String(pick(row, ["entity_id", "campaign_id", "adset_id", "ad_id"], ""));
+    if (!entityId || entityType !== level) return;
+
+    const existing = map.get(entityId);
+    if (!existing || recommendationTimestamp(row) >= recommendationTimestamp(existing)) {
+      map.set(entityId, row);
+    }
+  });
+
+  return map;
+};
+
+const applyAiRecommendations = (rows: CampaignRow[], recommendationsData: any, level: CampaignLevel) => {
+  const recommendationMap = buildRecommendationMap(recommendationsData, level);
+  if (!recommendationMap.size) return rows;
+
+  return rows.map((row) => {
+    const entityId = String(level === "campaign" ? row.campaign_id || row.id : level === "adset" ? row.adset_id || row.id : row.id);
+    const recommendation = recommendationMap.get(entityId);
+    if (!recommendation) return row;
+
+    const currentBudget = pick(recommendation, ["current_budget", "allocated_budget"], "");
+    const recommendedBudget = pick(recommendation, ["recommended_budget"], "");
+    const action = String(pick(recommendation, ["recommendation_action"], ""));
+    const detail = String(pick(recommendation, ["explanation", "recommendation_detail", "reason_code"], ""));
+
+    return {
+      ...row,
+      allocated_budget: hasValue(currentBudget) ? budgetValue(currentBudget) : row.allocated_budget,
+      recommended_budget: hasValue(recommendedBudget) ? budgetValue(recommendedBudget) : row.recommended_budget,
+      has_recommended_budget: hasValue(recommendedBudget),
+      recommendation_action: action,
+      recommendation_detail: detail,
+    };
+  });
+};
+
 const normalizeTotals = (data: any) => data?.totals || data?.total || data?.summary || null;
 
 const totalRow = (rows: CampaignRow[], label = "Total", backendTotals?: Record<string, any> | null): CampaignRow => {
@@ -383,6 +477,8 @@ const totalRow = (rows: CampaignRow[], label = "Total", backendTotals?: Record<s
       numericFields.forEach((field) => {
         acc[field] += row[field] || 0;
       });
+      acc.allocated_budget += row.allocated_budget || 0;
+      acc.recommended_budget += row.has_recommended_budget ? row.recommended_budget || 0 : 0;
       return acc;
     },
     {
@@ -396,7 +492,7 @@ const totalRow = (rows: CampaignRow[], label = "Total", backendTotals?: Record<s
       revenue: 0,
       allocated_budget: 0,
       recommended_budget: 0,
-    } as Record<(typeof numericFields)[number], number>
+    } as Record<(typeof numericFields)[number] | "allocated_budget" | "recommended_budget", number>
   );
 
   const resolvedTotals = {
@@ -408,8 +504,8 @@ const totalRow = (rows: CampaignRow[], label = "Total", backendTotals?: Record<s
     initiated: numberWithFallback(backendTotals?.initiated, totals.initiated),
     purchases: numberWithFallback(backendTotals?.purchases, totals.purchases),
     revenue: numberWithFallback(backendTotals?.revenue, totals.revenue),
-    allocated_budget: budgetWithFallback(backendTotals?.allocated_budget, totals.allocated_budget),
-    recommended_budget: budgetWithFallback(backendTotals?.recommended_budget, totals.recommended_budget),
+    allocated_budget: totals.allocated_budget || budgetWithFallback(backendTotals?.allocated_budget, totals.allocated_budget),
+    recommended_budget: totals.recommended_budget || budgetWithFallback(backendTotals?.recommended_budget, totals.recommended_budget),
   };
 
   return {
@@ -426,6 +522,9 @@ const totalRow = (rows: CampaignRow[], label = "Total", backendTotals?: Record<s
     daily_budget: 0,
     lifetime_budget: 0,
     budget_type: "",
+    has_recommended_budget: hasValue(backendTotals?.recommended_budget),
+    recommendation_action: String(pick(backendTotals || {}, ["recommendation_action", "budget_recommendation"], "")),
+    recommendation_detail: String(pick(backendTotals || {}, ["recommendation_detail"], "")),
     budget_recommendation: String(pick(backendTotals || {}, ["budget_recommendation"], "")),
     budget_utilization: numberValue(backendTotals?.budget_utilization),
     start_date: "",
@@ -459,6 +558,38 @@ const formatDate = (value: string) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 };
 
+const toApiDate = (date: Date) => date.toISOString().slice(0, 10);
+
+const getDateRange = (range: string) => {
+  const today = new Date();
+  const start = new Date(today);
+
+  if (range === "yesterday") {
+    start.setDate(today.getDate() - 1);
+    return { date_from: toApiDate(start), date_to: toApiDate(start) };
+  }
+
+  if (range === "last7") start.setDate(today.getDate() - 6);
+  else if (range === "last30") start.setDate(today.getDate() - 29);
+  else if (range === "last90") start.setDate(today.getDate() - 89);
+  else if (range === "thisyear") start.setMonth(0, 1);
+
+  return { date_from: toApiDate(start), date_to: toApiDate(today) };
+};
+
+const getApiErrorMessage = (error: unknown) => {
+  const data = typeof error === "object" && error && "data" in error ? (error as { data?: unknown }).data : null;
+
+  if (typeof data === "string") return data;
+  if (data && typeof data === "object") {
+    const detail = (data as Record<string, unknown>).detail;
+    if (typeof detail === "string") return detail;
+    return JSON.stringify(data);
+  }
+
+  return "Could not generate AI recommendations.";
+};
+
 const isPastDate = (value: string) => {
   if (!value) return false;
   const date = new Date(value);
@@ -487,18 +618,39 @@ function StatusBadge({ status }: { status: string }) {
   return <Chip size="small" label={label} color={color} variant="outlined" sx={{ height: 22, fontSize: 11 }} />;
 }
 
-function RecommendationBadge({ recommendation }: { recommendation: string }) {
-  const normalized = recommendation.toLowerCase();
-  const config: Record<string, { label: string; color: "success" | "error" | "warning" | "default" }> = {
+const displayRecommendationAction = (row: CampaignRow) => {
+  if (!row.has_recommended_budget) return "";
+
+  const currentBudget = row.allocated_budget || 0;
+  const recommendedBudget = row.recommended_budget || 0;
+  const sameBudget = Math.abs(recommendedBudget - currentBudget) < 0.005;
+
+  if (sameBudget && currentBudget <= 0) return "no_budget";
+  if (sameBudget) return "maintain";
+  if (recommendedBudget > currentBudget) return "increase";
+  return "decrease";
+};
+
+function RecommendationBadge({ recommendation, detail }: { recommendation: string; detail?: string }) {
+  const normalized = recommendation.toLowerCase().replace(/\s+/g, "_");
+  const config: Record<string, { label: string; color: "success" | "error" | "warning" | "info" | "default" }> = {
     increase: { label: "Increase", color: "success" },
     decrease: { label: "Decrease", color: "error" },
     monitor: { label: "Monitor", color: "warning" },
-    maintain: { label: "Maintain", color: "default" },
+    maintain: { label: "Maintain", color: "info" },
     no_budget: { label: "No Budget", color: "default" },
   };
   const badge = config[normalized] || { label: recommendation || "-", color: "default" as const };
 
-  return <Chip size="small" label={badge.label} color={badge.color} variant="outlined" sx={{ height: 22, fontSize: 11 }} />;
+  const chip = <Chip size="small" label={badge.label} color={badge.color} variant="outlined" sx={{ height: 22, fontSize: 11 }} />;
+
+  return detail ? (
+    <Tooltip title={detail} arrow>
+      {chip}
+    </Tooltip>
+  ) : (
+    chip
+  );
 }
 
 function DenseMetricTable({
@@ -607,15 +759,23 @@ export default function CampaignsPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignRow | null>(null);
   const [selectedAdset, setSelectedAdset] = useState<CampaignRow | null>(null);
   const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
+  const [generationError, setGenerationError] = useState("");
+  const [generateAiRecommendations, { isLoading: isGeneratingRecommendations }] = useGenerateAiRecommendationsMutation();
 
   const campaignId = selectedCampaign?.campaign_id || selectedCampaign?.id;
   const adsetId = selectedAdset?.adset_id || selectedAdset?.id;
+  const selectedClientId = user?.id || null;
 
-  const { currentData, isFetching } = useGetDashboardCampaignsQuery({
+  const { currentData, isFetching, refetch } = useGetDashboardCampaignsQuery({
     level: mainLevel,
     range,
     platform,
     status,
+  });
+
+  const { currentData: recommendationsData, refetch: refetchRecommendations } = useGetAiRecommendationsQuery({
+    entity_type: mainLevel,
+    platform,
   });
 
   const { currentData: adsetsData, isFetching: isAdsetsFetching } = useGetDashboardCampaignsQuery(
@@ -625,6 +785,14 @@ export default function CampaignsPage() {
       range,
       platform,
       status,
+    },
+    { skip: !campaignId }
+  );
+
+  const { currentData: adsetRecommendationsData } = useGetAiRecommendationsQuery(
+    {
+      entity_type: "adset",
+      platform,
     },
     { skip: !campaignId }
   );
@@ -641,9 +809,26 @@ export default function CampaignsPage() {
     { skip: !campaignId }
   );
 
-  const rows = useMemo(() => normalizeRows(currentData, mainLevel), [currentData, mainLevel]);
-  const adsetRows = useMemo(() => normalizeRows(adsetsData, "adset"), [adsetsData]);
-  const adRows = useMemo(() => normalizeRows(adsData, "ad"), [adsData]);
+  const { currentData: adRecommendationsData } = useGetAiRecommendationsQuery(
+    {
+      entity_type: "ad",
+      platform,
+    },
+    { skip: !adsetId }
+  );
+
+  const rows = useMemo(
+    () => applyAiRecommendations(normalizeRows(currentData, mainLevel), recommendationsData, mainLevel),
+    [currentData, mainLevel, recommendationsData]
+  );
+  const adsetRows = useMemo(
+    () => applyAiRecommendations(normalizeRows(adsetsData, "adset"), adsetRecommendationsData, "adset"),
+    [adsetsData, adsetRecommendationsData]
+  );
+  const adRows = useMemo(
+    () => applyAiRecommendations(normalizeRows(adsData, "ad"), adRecommendationsData, "ad"),
+    [adsData, adRecommendationsData]
+  );
   const drawerTotals = totalRow(selectedAdset ? adRows : adsetRows, "Total", normalizeTotals(selectedAdset ? adsData : adsetsData));
   const mainTotals = useMemo(() => totalRow(rows, "Total", normalizeTotals(currentData)), [currentData, rows]);
   const resetSelections = () => {
@@ -670,9 +855,27 @@ export default function CampaignsPage() {
     { field: "cpc", headerName: "CPC", width: 85, valueFormatter: (value) => formatMoney(numberValue(value)) },
     {
       field: "allocated_budget",
-      headerName: "Allocated Budget",
-      width: 150,
+      headerName: "Budget",
+      width: 125,
       valueFormatter: (value) => formatMoney(numberValue(value)),
+    },
+    {
+      field: "recommended_budget",
+      headerName: "AI Rec",
+      width: 125,
+      valueGetter: (_value, row) => (row.has_recommended_budget ? row.recommended_budget : null),
+      valueFormatter: (value) => (hasValue(value) ? formatMoney(numberValue(value)) : "-"),
+    },
+    {
+      field: "recommendation_action",
+      headerName: "AI Action",
+      width: 125,
+      renderCell: (params) => {
+        const action = displayRecommendationAction(params.row);
+        return params.row.has_recommended_budget && action ? (
+          <RecommendationBadge recommendation={action} detail={params.row.recommendation_detail} />
+        ) : null;
+      },
     },
     {
       field: "budget_type",
@@ -685,18 +888,6 @@ export default function CampaignsPage() {
     { field: "purchases", headerName: "Purchases", width: 105, valueFormatter: (value) => formatNumber(numberValue(value)) },
     { field: "revenue", headerName: "Revenue", width: 125, valueFormatter: (value) => formatMoney(numberValue(value)) },
     { field: "roas", headerName: "ROAS", width: 85, valueFormatter: (value) => formatRoas(numberValue(value)) },
-    {
-      field: "recommended_budget",
-      headerName: "Recommended Budget",
-      width: 175,
-      valueFormatter: (value) => formatMoney(numberValue(value)),
-    },
-    {
-      field: "budget_recommendation",
-      headerName: "Recommendation",
-      width: 140,
-      renderCell: (params) => <RecommendationBadge recommendation={String(params.value || "")} />,
-    },
     {
       field: "budget_utilization",
       headerName: "Budget Utilization",
@@ -723,6 +914,31 @@ export default function CampaignsPage() {
   const selectAdset = (row: CampaignRow) => {
     setSelectedAdset(row);
     setDrawerTab("ads");
+  };
+
+  const handleGenerateAiRecommendations = async () => {
+    const { date_from, date_to } = getDateRange(range);
+    const payload = {
+      ...(selectedClientId ? { client_id: selectedClientId } : {}),
+      platform: platform && platform !== "all" ? platform : "meta",
+      entity_type: "campaign",
+      date_from,
+      date_to,
+      total_budget: null,
+      use_llm: true,
+      use_vector_memory: true,
+    };
+
+    setGenerationError("");
+
+    try {
+      await generateAiRecommendations(payload).unwrap();
+
+      refetch();
+      refetchRecommendations();
+    } catch (error) {
+      setGenerationError(getApiErrorMessage(error));
+    }
   };
 
   return (
@@ -805,7 +1021,23 @@ export default function CampaignsPage() {
               <ToggleButton value="ad">Ads</ToggleButton>
             </ToggleButtonGroup>
           </Box>
+
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AutoAwesomeIcon fontSize="small" />}
+            onClick={handleGenerateAiRecommendations}
+            disabled={isGeneratingRecommendations}
+            sx={{ alignSelf: { xs: "stretch", sm: "flex-end" }, minHeight: 40 }}
+          >
+            {isGeneratingRecommendations ? "Generating..." : "Generate AI Recommendations"}
+          </Button>
         </Stack>
+        {generationError ? (
+          <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>
+            {generationError}
+          </Typography>
+        ) : null}
       </Box>
 
       <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, overflow: "hidden", minWidth: 0 }}>
