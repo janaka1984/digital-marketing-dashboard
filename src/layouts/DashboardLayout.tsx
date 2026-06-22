@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
-import TuneIcon from '@mui/icons-material/Tune';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
@@ -21,6 +21,7 @@ import { useState } from 'react';
 import Sidebar from './Sidebar';
 import { useColorMode } from '@theme/useColorMode';
 import { useTheme } from '@mui/material/styles';
+import CampaignChat from '@components/chat/CampaignChat';
 
 const DRAWER_WIDTH = 280;
 const MINI_DRAWER_WIDTH = 88;
@@ -29,6 +30,9 @@ const HEADER_HEIGHT = 92;
 export default function DashboardLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [searchDraft, setSearchDraft] = useState('');
+  const [chatSeedMessage, setChatSeedMessage] = useState('');
   const { toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -83,6 +87,7 @@ export default function DashboardLayout() {
 
           <Paper
             elevation={0}
+            onClick={() => setChatOpen(true)}
             sx={{
               display: { xs: 'none', md: 'flex' },
               alignItems: 'center',
@@ -92,22 +97,40 @@ export default function DashboardLayout() {
               maxWidth: 540,
               px: 2,
               borderRadius: 3,
-              border: `1px solid ${theme.palette.divider}`,
-              bgcolor: isDark ? '#1A2742' : '#F8FAFD'
+              border: `1px solid ${chatOpen ? theme.palette.primary.main : theme.palette.divider}`,
+              bgcolor: isDark ? '#1A2742' : '#F8FAFD',
+              boxShadow: chatOpen ? `0 0 0 3px ${isDark ? 'rgba(126,87,194,0.24)' : 'rgba(94,53,177,0.12)'}` : 'none',
+              cursor: 'text',
+              transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
             }}
           >
-            <SearchIcon sx={{ color: theme.palette.text.secondary }} />
+            <SearchIcon sx={{ color: chatOpen ? theme.palette.primary.main : theme.palette.text.secondary }} />
             <InputBase
-              placeholder="Search"
+              placeholder="Ask Campaign AI"
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                const trimmed = searchDraft.trim();
+                if (!trimmed) {
+                  setChatOpen(true);
+                  return;
+                }
+                setChatSeedMessage(trimmed);
+                setSearchDraft('');
+                setChatOpen(true);
+              }}
               sx={{ flex: 1, fontSize: '1.05rem', color: theme.palette.text.primary }}
             />
             <IconButton
+              onClick={() => setChatOpen(true)}
               sx={{
                 bgcolor: isDark ? 'rgba(179,157,219,0.2)' : '#EDE6F8',
                 borderRadius: 2,
                 color: theme.palette.primary.main
               }}>
-              <TuneIcon />
+              <AutoAwesomeIcon />
             </IconButton>
           </Paper>
 
@@ -134,6 +157,8 @@ export default function DashboardLayout() {
           </Stack>
         </Toolbar>
       </AppBar>
+
+      <CampaignChat open={chatOpen} initialMessage={chatSeedMessage} topOffset={HEADER_HEIGHT} onClose={() => setChatOpen(false)} />
 
       <Drawer
         variant={isDesktop ? 'permanent' : 'temporary'}
