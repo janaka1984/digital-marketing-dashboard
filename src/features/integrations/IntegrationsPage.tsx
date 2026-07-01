@@ -25,6 +25,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAppSelector } from "@store/hooks";
+import { dashboardTitleSx } from "@theme/index";
 import { useListAgencyClientsQuery } from "@services/accountsApi";
 import {
   FacebookAdAccountOption,
@@ -50,7 +51,10 @@ type IntegrationFormState = {
   test_event_code: string;
 };
 
-type FeedbackState = { type: "success" | "error" | "info"; message: string } | null;
+type FeedbackState = {
+  type: "success" | "error" | "info";
+  message: string;
+} | null;
 
 type CallbackPayload = {
   credentialId?: number;
@@ -121,8 +125,11 @@ function parseAccountPayload(value: string | null): FacebookAdAccountOption[] {
             normalizeValue(record.account_name) ||
             normalizeValue(record.label),
           account_id:
-            normalizeValue(record.account_id) || normalizeValue(record.ad_account_id) || id,
-          normalized_account_id: normalizeValue(record.normalized_account_id) || id,
+            normalizeValue(record.account_id) ||
+            normalizeValue(record.ad_account_id) ||
+            id,
+          normalized_account_id:
+            normalizeValue(record.normalized_account_id) || id,
         };
       })
       .filter(Boolean) as FacebookAdAccountOption[];
@@ -133,10 +140,12 @@ function parseAccountPayload(value: string | null): FacebookAdAccountOption[] {
 
 function hasFacebookOAuth(
   dataSource: IntegrationDataSource | null | undefined,
-  credential: IntegrationCredential | null | undefined
+  credential: IntegrationCredential | null | undefined,
 ) {
   return Boolean(
-    credential?.facebook_oauth_available ?? dataSource?.facebook_oauth_available ?? false
+    credential?.facebook_oauth_available ??
+    dataSource?.facebook_oauth_available ??
+    false,
   );
 }
 
@@ -144,15 +153,18 @@ function resolveFacebookOAuthAvailability(
   sourceType: string,
   activeDataSource: IntegrationDataSource | null,
   activeCredential: IntegrationCredential | null,
-  dataSources: IntegrationDataSource[]
+  dataSources: IntegrationDataSource[],
 ) {
   if (sourceType !== "meta") return false;
 
   const activeAvailability =
-    activeCredential?.facebook_oauth_available ?? activeDataSource?.facebook_oauth_available;
+    activeCredential?.facebook_oauth_available ??
+    activeDataSource?.facebook_oauth_available;
   if (typeof activeAvailability === "boolean") return activeAvailability;
 
-  const matchingMetaSource = dataSources.find((dataSource) => dataSource.source_type === "meta");
+  const matchingMetaSource = dataSources.find(
+    (dataSource) => dataSource.source_type === "meta",
+  );
   if (typeof matchingMetaSource?.facebook_oauth_available === "boolean") {
     return matchingMetaSource.facebook_oauth_available;
   }
@@ -163,7 +175,7 @@ function resolveFacebookOAuthAvailability(
 
 function buildFormState(
   dataSource?: IntegrationDataSource | null,
-  credential?: IntegrationCredential | null
+  credential?: IntegrationCredential | null,
 ): IntegrationFormState {
   return {
     client_id: normalizeValue(dataSource?.client_id),
@@ -171,14 +183,18 @@ function buildFormState(
     external_id: normalizeValue(dataSource?.external_id),
     access_token: normalizeValue(credential?.access_token),
     marketing_access_token: normalizeValue(credential?.marketing_access_token),
-    marketing_ad_account_id: normalizeValue(credential?.marketing_ad_account_id),
+    marketing_ad_account_id: normalizeValue(
+      credential?.marketing_ad_account_id,
+    ),
     api_version: normalizeValue(credential?.api_version),
     business_id: normalizeValue(credential?.business_id),
     test_event_code: normalizeValue(credential?.test_event_code),
   };
 }
 
-function readCallbackPayload(searchParams: URLSearchParams): CallbackPayload | null {
+function readCallbackPayload(
+  searchParams: URLSearchParams,
+): CallbackPayload | null {
   const hasOAuthSignal =
     searchParams.has("selection_required") ||
     searchParams.has("credential_id") ||
@@ -186,7 +202,9 @@ function readCallbackPayload(searchParams: URLSearchParams): CallbackPayload | n
     searchParams.has("facebook_oauth");
   if (!hasOAuthSignal) return null;
   const directAccounts = parseAccountPayload(searchParams.get("ad_accounts"));
-  const availableAccounts = parseAccountPayload(searchParams.get("available_ad_accounts"));
+  const availableAccounts = parseAccountPayload(
+    searchParams.get("available_ad_accounts"),
+  );
   const fallbackAccounts = parseAccountPayload(searchParams.get("accounts"));
   return {
     credentialId:
@@ -204,7 +222,8 @@ function readCallbackPayload(searchParams: URLSearchParams): CallbackPayload | n
       : availableAccounts.length
         ? availableAccounts
         : fallbackAccounts,
-    message: searchParams.get("message") || searchParams.get("status") || undefined,
+    message:
+      searchParams.get("message") || searchParams.get("status") || undefined,
   };
 }
 
@@ -213,14 +232,16 @@ export default function IntegrationsPage() {
   const isAgency = user?.role === "agency";
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { data: allDataSources = [], isLoading: isLoadingDataSources, refetch: refetchDataSources } =
-    useListDataSourcesQuery();
-  const { data: agencyClients = [], isLoading: isLoadingClients } = useListAgencyClientsQuery(
-    undefined,
-    { skip: !isAgency }
-  );
+  const {
+    data: allDataSources = [],
+    isLoading: isLoadingDataSources,
+    refetch: refetchDataSources,
+  } = useListDataSourcesQuery();
+  const { data: agencyClients = [], isLoading: isLoadingClients } =
+    useListAgencyClientsQuery(undefined, { skip: !isAgency });
 
-  const [createDataSource, { isLoading: isCreatingDataSource }] = useAddDataSourceMutation();
+  const [createDataSource, { isLoading: isCreatingDataSource }] =
+    useAddDataSourceMutation();
   const [triggerGetCredentials] = useLazyGetDataSourceCredentialsQuery();
   const [updateCredentials, { isLoading: isSavingCredentials }] =
     useUpdateDataSourceCredentialsMutation();
@@ -229,17 +250,27 @@ export default function IntegrationsPage() {
   const [selectFacebookAdAccount, { isLoading: isSelectingAdAccount }] =
     useSelectFacebookAdAccountMutation();
 
-  const [selectedClientId, setSelectedClientId] = useState(searchParams.get("client") || "");
+  const [selectedClientId, setSelectedClientId] = useState(
+    searchParams.get("client") || "",
+  );
   const [credentialsByDataSource, setCredentialsByDataSource] = useState<
     Record<number, IntegrationCredential | null>
   >({});
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingDataSourceId, setEditingDataSourceId] = useState<number | null>(null);
+  const [editingDataSourceId, setEditingDataSourceId] = useState<number | null>(
+    null,
+  );
   const [form, setForm] = useState<IntegrationFormState>(EMPTY_FORM);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const [adAccountOptions, setAdAccountOptions] = useState<FacebookAdAccountOption[]>([]);
-  const [pendingCredentialId, setPendingCredentialId] = useState<number | null>(null);
-  const [pendingDataSourceId, setPendingDataSourceId] = useState<number | null>(null);
+  const [adAccountOptions, setAdAccountOptions] = useState<
+    FacebookAdAccountOption[]
+  >([]);
+  const [pendingCredentialId, setPendingCredentialId] = useState<number | null>(
+    null,
+  );
+  const [pendingDataSourceId, setPendingDataSourceId] = useState<number | null>(
+    null,
+  );
   const [pendingSelectionToken, setPendingSelectionToken] = useState("");
   const [selectedAdAccountId, setSelectedAdAccountId] = useState("");
 
@@ -262,13 +293,15 @@ export default function IntegrationsPage() {
   const visibleDataSources = useMemo(() => {
     if (!isAgency || !selectedClientId) return allDataSources;
     return allDataSources.filter(
-      (dataSource) => normalizeValue(dataSource.client_id) === selectedClientId
+      (dataSource) => normalizeValue(dataSource.client_id) === selectedClientId,
     );
   }, [allDataSources, isAgency, selectedClientId]);
 
   const selectedClient = useMemo(
-    () => agencyClients.find((client) => String(client.id) === selectedClientId) ?? null,
-    [agencyClients, selectedClientId]
+    () =>
+      agencyClients.find((client) => String(client.id) === selectedClientId) ??
+      null,
+    [agencyClients, selectedClientId],
   );
 
   useEffect(() => {
@@ -279,7 +312,10 @@ export default function IntegrationsPage() {
       const updates: Record<number, IntegrationCredential | null> = {};
       for (const dataSource of visibleDataSources) {
         try {
-          updates[dataSource.id] = await triggerGetCredentials(dataSource.id, true).unwrap();
+          updates[dataSource.id] = await triggerGetCredentials(
+            dataSource.id,
+            true,
+          ).unwrap();
         } catch {
           updates[dataSource.id] = null;
         }
@@ -327,7 +363,7 @@ export default function IntegrationsPage() {
         callback.adAccounts[0]?.normalized_account_id ||
           callback.adAccounts[0]?.account_id ||
           callback.adAccounts[0]?.id ||
-          ""
+          "",
       );
       setFeedback({
         type: "info",
@@ -340,7 +376,9 @@ export default function IntegrationsPage() {
 
     setFeedback({
       type: "success",
-      message: callback.message || "Facebook connection completed. Imported values are refreshing.",
+      message:
+        callback.message ||
+        "Facebook connection completed. Imported values are refreshing.",
     });
 
     if (callback.dataSourceId) {
@@ -356,19 +394,25 @@ export default function IntegrationsPage() {
     }
 
     refetchDataSources();
-  }, [refetchDataSources, searchParams, setSearchParams, triggerGetCredentials]);
+  }, [
+    refetchDataSources,
+    searchParams,
+    setSearchParams,
+    triggerGetCredentials,
+  ]);
 
   const activeDataSource = editingDataSourceId
-    ? visibleDataSources.find((item) => item.id === editingDataSourceId) ?? null
+    ? (visibleDataSources.find((item) => item.id === editingDataSourceId) ??
+      null)
     : null;
   const activeCredential = editingDataSourceId
-    ? credentialsByDataSource[editingDataSourceId] ?? null
+    ? (credentialsByDataSource[editingDataSourceId] ?? null)
     : null;
   const showFacebookOAuthCTA = resolveFacebookOAuthAvailability(
     form.source_type,
     activeDataSource,
     activeCredential,
-    visibleDataSources
+    visibleDataSources,
   );
 
   const handleClientChange = (clientId: string) => {
@@ -425,18 +469,30 @@ export default function IntegrationsPage() {
 
   const refreshCredentials = async (dataSourceId: number) => {
     try {
-      const credential = await triggerGetCredentials(dataSourceId, true).unwrap();
-      setCredentialsByDataSource((current) => ({ ...current, [dataSourceId]: credential }));
+      const credential = await triggerGetCredentials(
+        dataSourceId,
+        true,
+      ).unwrap();
+      setCredentialsByDataSource((current) => ({
+        ...current,
+        [dataSourceId]: credential,
+      }));
       return credential;
     } catch {
-      setCredentialsByDataSource((current) => ({ ...current, [dataSourceId]: null }));
+      setCredentialsByDataSource((current) => ({
+        ...current,
+        [dataSourceId]: null,
+      }));
       return null;
     }
   };
 
   const handleSaveIntegration = async () => {
     if (isAgency && !form.client_id) {
-      setFeedback({ type: "error", message: "Select a client before saving an integration." });
+      setFeedback({
+        type: "error",
+        message: "Select a client before saving an integration.",
+      });
       return;
     }
     try {
@@ -452,7 +508,10 @@ export default function IntegrationsPage() {
           test_event_code: form.test_event_code,
         },
       }).unwrap();
-      setCredentialsByDataSource((current) => ({ ...current, [dataSource.id]: credential }));
+      setCredentialsByDataSource((current) => ({
+        ...current,
+        [dataSource.id]: credential,
+      }));
       setForm(buildFormState(dataSource, credential));
       setFeedback({ type: "success", message: "Integration saved." });
       refetchDataSources();
@@ -460,14 +519,18 @@ export default function IntegrationsPage() {
       console.error("Failed to save integration", error);
       setFeedback({
         type: "error",
-        message: "The integration could not be saved. Check the values and try again.",
+        message:
+          "The integration could not be saved. Check the values and try again.",
       });
     }
   };
 
   const handleFacebookConnect = async () => {
     if (isAgency && !form.client_id) {
-      setFeedback({ type: "error", message: "Select a client before connecting Facebook." });
+      setFeedback({
+        type: "error",
+        message: "Select a client before connecting Facebook.",
+      });
       return;
     }
     try {
@@ -484,7 +547,8 @@ export default function IntegrationsPage() {
       console.error("Failed to start Facebook OAuth", error);
       setFeedback({
         type: "error",
-        message: "Facebook could not be connected right now. Try again or use manual fields below.",
+        message:
+          "Facebook could not be connected right now. Try again or use manual fields below.",
       });
     }
   };
@@ -498,7 +562,8 @@ export default function IntegrationsPage() {
   };
 
   const handleAdAccountSubmit = async () => {
-    if (!pendingCredentialId || !pendingSelectionToken || !selectedAdAccountId) return;
+    if (!pendingCredentialId || !pendingSelectionToken || !selectedAdAccountId)
+      return;
     try {
       await selectFacebookAdAccount({
         credentialId: pendingCredentialId,
@@ -537,15 +602,20 @@ export default function IntegrationsPage() {
         alignItems={{ xs: "flex-start", md: "center" }}
       >
         <Box>
-          <Typography variant="h4" fontWeight={700} color="primary">
+          <Typography variant="h4" sx={dashboardTitleSx}>
             Integrations
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
-            Manage each client&apos;s platform connection and tokens from one guided screen.
+            Manage each client&apos;s platform connection and tokens from one
+            guided screen.
           </Typography>
         </Box>
 
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="stretch">
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          alignItems="stretch"
+        >
           {isAgency && (
             <TextField
               select
@@ -579,7 +649,8 @@ export default function IntegrationsPage() {
 
       {isAgency && !isLoadingClients && agencyClients.length === 0 && (
         <Alert severity="info">
-          No clients are available yet. Invite a client first before creating integrations.
+          No clients are available yet. Invite a client first before creating
+          integrations.
         </Alert>
       )}
 
@@ -593,7 +664,8 @@ export default function IntegrationsPage() {
               {selectedClient.business_name}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Only this client&apos;s integration values are shown and editable here.
+              Only this client&apos;s integration values are shown and editable
+              here.
             </Typography>
           </Stack>
         </Paper>
@@ -610,11 +682,17 @@ export default function IntegrationsPage() {
             >
               <Box>
                 <Typography variant="h5" fontWeight={700}>
-                  {editingDataSourceId ? "Edit Integration" : "Connect a Platform"}
+                  {editingDataSourceId
+                    ? "Edit Integration"
+                    : "Connect a Platform"}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                  For Meta, start with Facebook connect. Manual token fields are still available if
-                  needed.
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.75 }}
+                >
+                  For Meta, start with Facebook connect. Manual token fields are
+                  still available if needed.
                 </Typography>
               </Box>
               {editingDataSourceId && (
@@ -623,7 +701,10 @@ export default function IntegrationsPage() {
                   color="inherit"
                   onClick={() => {
                     setEditingDataSourceId(null);
-                    setForm({ ...EMPTY_FORM, client_id: isAgency ? selectedClientId : "" });
+                    setForm({
+                      ...EMPTY_FORM,
+                      client_id: isAgency ? selectedClientId : "",
+                    });
                   }}
                 >
                   Switch To New Integration
@@ -640,7 +721,11 @@ export default function IntegrationsPage() {
                 onChange={handleFormChange}
                 fullWidth
                 disabled={Boolean(editingDataSourceId)}
-                helperText={editingDataSourceId ? "Platform is fixed after creation." : undefined}
+                helperText={
+                  editingDataSourceId
+                    ? "Platform is fixed after creation."
+                    : undefined
+                }
               >
                 {PLATFORM_OPTIONS.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
@@ -675,7 +760,11 @@ export default function IntegrationsPage() {
                 }}
               >
                 <Stack spacing={1.5}>
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems="center">
+                  <Stack
+                    direction={{ xs: "column", md: "row" }}
+                    spacing={1.5}
+                    alignItems="center"
+                  >
                     <Chip
                       icon={<FacebookIcon />}
                       label="Recommended"
@@ -687,8 +776,8 @@ export default function IntegrationsPage() {
                     </Typography>
                   </Stack>
                   <Typography variant="body2" color="text.secondary">
-                    This imports the Meta access values for the selected client and keeps manual
-                    entry as a fallback.
+                    This imports the Meta access values for the selected client
+                    and keeps manual entry as a fallback.
                   </Typography>
                   <Button
                     variant="contained"
@@ -780,15 +869,22 @@ export default function IntegrationsPage() {
 
         {isLoadingDataSources ? (
           <Paper sx={{ p: 3, borderRadius: 3 }}>
-            <Typography color="text.secondary">Loading integrations...</Typography>
+            <Typography color="text.secondary">
+              Loading integrations...
+            </Typography>
           </Paper>
         ) : visibleDataSources.length === 0 ? (
           <Paper sx={{ p: 3, borderRadius: 3 }}>
             <Typography variant="body1" fontWeight={600}>
               No integrations yet for this client.
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-              Start with Meta and use Facebook connect to import tokens automatically.
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.75 }}
+            >
+              Start with Meta and use Facebook connect to import tokens
+              automatically.
             </Typography>
           </Paper>
         ) : (
@@ -816,14 +912,18 @@ export default function IntegrationsPage() {
                         </Typography>
                       </Box>
 
-                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                        {oauthAvailable && dataSource.source_type === "meta" && (
-                          <Chip
-                            color="success"
-                            icon={<CheckCircleOutlineIcon />}
-                            label="Facebook import available"
-                          />
-                        )}
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1}
+                      >
+                        {oauthAvailable &&
+                          dataSource.source_type === "meta" && (
+                            <Chip
+                              color="success"
+                              icon={<CheckCircleOutlineIcon />}
+                              label="Facebook import available"
+                            />
+                          )}
                         <Button
                           variant="outlined"
                           startIcon={<EditOutlinedIcon />}
@@ -846,14 +946,18 @@ export default function IntegrationsPage() {
                         <Typography variant="caption" color="text.secondary">
                           Access Token
                         </Typography>
-                        <Typography variant="body2">{maskValue(credential?.access_token as string)}</Typography>
+                        <Typography variant="body2">
+                          {maskValue(credential?.access_token as string)}
+                        </Typography>
                       </Box>
                       <Box sx={{ minWidth: 220 }}>
                         <Typography variant="caption" color="text.secondary">
                           Marketing Token
                         </Typography>
                         <Typography variant="body2">
-                          {maskValue(credential?.marketing_access_token as string)}
+                          {maskValue(
+                            credential?.marketing_access_token as string,
+                          )}
                         </Typography>
                       </Box>
                       <Box sx={{ minWidth: 220 }}>
@@ -861,7 +965,9 @@ export default function IntegrationsPage() {
                           Ad Account ID
                         </Typography>
                         <Typography variant="body2">
-                          {normalizeValue(credential?.marketing_ad_account_id) || "Not set"}
+                          {normalizeValue(
+                            credential?.marketing_ad_account_id,
+                          ) || "Not set"}
                         </Typography>
                       </Box>
                       <Box sx={{ minWidth: 220 }}>
@@ -885,7 +991,8 @@ export default function IntegrationsPage() {
                           Test Event Code
                         </Typography>
                         <Typography variant="body2">
-                          {normalizeValue(credential?.test_event_code) || "Not set"}
+                          {normalizeValue(credential?.test_event_code) ||
+                            "Not set"}
                         </Typography>
                       </Box>
                     </Stack>
@@ -909,8 +1016,8 @@ export default function IntegrationsPage() {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Multiple ad accounts were returned from Facebook. Choose the account to finish this
-              client&apos;s Meta connection.
+              Multiple ad accounts were returned from Facebook. Choose the
+              account to finish this client&apos;s Meta connection.
             </Typography>
             <TextField
               select
@@ -921,7 +1028,9 @@ export default function IntegrationsPage() {
             >
               {adAccountOptions.map((account) => {
                 const optionValue =
-                  account.normalized_account_id || account.account_id || account.id;
+                  account.normalized_account_id ||
+                  account.account_id ||
+                  account.id;
                 return (
                   <MenuItem key={account.id} value={optionValue}>
                     {account.name || account.id} ({optionValue})
@@ -932,13 +1041,20 @@ export default function IntegrationsPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeAdAccountDialog} disabled={isSelectingAdAccount}>
+          <Button
+            onClick={closeAdAccountDialog}
+            disabled={isSelectingAdAccount}
+          >
             Cancel
           </Button>
           <Button
             variant="contained"
             onClick={handleAdAccountSubmit}
-            disabled={!pendingSelectionToken || !selectedAdAccountId || isSelectingAdAccount}
+            disabled={
+              !pendingSelectionToken ||
+              !selectedAdAccountId ||
+              isSelectingAdAccount
+            }
           >
             Connect Account
           </Button>

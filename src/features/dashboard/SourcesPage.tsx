@@ -12,9 +12,14 @@ import {
 import Grid from "@mui/material/Grid2";
 import { useAppSelector } from "@store/hooks";
 import { useGetDashboardOverviewQuery } from "@services/dashboardApi";
-import { GEO_GROUP_BY_OPTIONS, GEO_METRIC_OPTIONS, GEO_RANGE_OPTIONS } from "@services/geoSummaryApi";
+import {
+  GEO_GROUP_BY_OPTIONS,
+  GEO_METRIC_OPTIONS,
+  GEO_RANGE_OPTIONS,
+} from "@services/geoSummaryApi";
 import TopSourcesBarChart from "@components/charts/TopSourcesBarChart";
 import EventGeoMap from "@components/EventGeoMap";
+import { dashboardTitleSx } from "@theme/index";
 import { useGeoFilters } from "./hooks/useGeoFilters";
 import { useGeoSummary } from "./hooks/useGeoSummary";
 
@@ -41,11 +46,16 @@ export default function SourcesPage() {
     ...filters,
     client_id: role === "agency" ? filters.client_id : undefined,
   };
-  const { locations, filterOptions, isFetching: isGeoFetching } = useGeoSummary(geoFilters);
+  const {
+    locations,
+    filterOptions,
+    isFetching: isGeoFetching,
+  } = useGeoSummary(geoFilters);
 
-  const { data: overview, isFetching: isOverviewFetching } = useGetDashboardOverviewQuery({
-    range: filters.range,
-  });
+  const { data: overview, isFetching: isOverviewFetching } =
+    useGetDashboardOverviewQuery({
+      range: filters.range,
+    });
 
   const sources = overview?.top_sources || [];
   const mediums = overview?.top_mediums || [];
@@ -55,8 +65,10 @@ export default function SourcesPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h4" fontWeight={600}>
-        {role === "agency" ? "Traffic Sources (Agency View)" : "Traffic Sources & Referrers"}
+      <Typography variant="h4" sx={dashboardTitleSx}>
+        {role === "agency"
+          ? "Traffic Sources (Agency View)"
+          : "Traffic Sources & Referrers"}
       </Typography>
 
       <Box
@@ -67,7 +79,12 @@ export default function SourcesPage() {
           boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
         }}
       >
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} useFlexGap flexWrap="wrap">
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={1.5}
+          useFlexGap
+          flexWrap="wrap"
+        >
           <FormControl size="small" sx={{ minWidth: { xs: "100%", md: 170 } }}>
             <Typography variant="caption" sx={{ mb: 0.5 }}>
               Date Range
@@ -156,7 +173,11 @@ export default function SourcesPage() {
               aria-label="Group by selector"
             >
               {GEO_GROUP_BY_OPTIONS.map((groupBy) => (
-                <ToggleButton key={groupBy} value={groupBy} aria-label={groupBy}>
+                <ToggleButton
+                  key={groupBy}
+                  value={groupBy}
+                  aria-label={groupBy}
+                >
                   {groupBy === "district" ? "District" : "City"}
                 </ToggleButton>
               ))}
@@ -174,7 +195,10 @@ export default function SourcesPage() {
         </Stack>
 
         {isLoading ? (
-          <Typography variant="caption" sx={{ display: "block", mt: 1, color: "text.secondary" }}>
+          <Typography
+            variant="caption"
+            sx={{ display: "block", mt: 1, color: "text.secondary" }}
+          >
             Loading...
           </Typography>
         ) : null}
@@ -196,7 +220,9 @@ export default function SourcesPage() {
               justifyContent: "center",
             }}
           >
-            <Typography color="text.secondary">No map data for selected filters</Typography>
+            <Typography color="text.secondary">
+              No map data for selected filters
+            </Typography>
           </Box>
         ) : (
           <EventGeoMap markers={locations} metric={filters.metric} />

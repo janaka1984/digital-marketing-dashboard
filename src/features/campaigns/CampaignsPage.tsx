@@ -37,6 +37,7 @@ import {
   useGetDashboardCampaignsQuery,
 } from "@services/dashboardApi";
 import { useAppSelector } from "@store/hooks";
+import { dashboardTitleSx } from "@theme/index";
 
 type CampaignLevel = "campaign" | "adset" | "ad";
 type DrawerTab = "overview" | "adsets" | "ads";
@@ -92,17 +93,19 @@ const levelLabels: Record<CampaignLevel, string> = {
   ad: "Ads",
 };
 
-const numericFields: Array<keyof Pick<
-  CampaignRow,
-  | "pageviews"
-  | "impressions"
-  | "reach"
-  | "clicks"
-  | "spend"
-  | "initiated"
-  | "purchases"
-  | "revenue"
->> = [
+const numericFields: Array<
+  keyof Pick<
+    CampaignRow,
+    | "pageviews"
+    | "impressions"
+    | "reach"
+    | "clicks"
+    | "spend"
+    | "initiated"
+    | "purchases"
+    | "revenue"
+  >
+> = [
   "pageviews",
   "impressions",
   "reach",
@@ -132,33 +135,61 @@ const numberValue = (value: unknown) => {
 };
 
 const numberWithFallback = (value: unknown, fallback: number) =>
-  value === undefined || value === null || value === "" ? fallback : numberValue(value);
+  value === undefined || value === null || value === ""
+    ? fallback
+    : numberValue(value);
 
 const budgetValue = (value: unknown) => numberValue(value) / 10;
 
 const budgetWithFallback = (value: unknown, fallback: number) =>
-  value === undefined || value === null || value === "" ? fallback : budgetValue(value);
+  value === undefined || value === null || value === ""
+    ? fallback
+    : budgetValue(value);
 
-const hasValue = (value: unknown) => value !== undefined && value !== null && value !== "";
+const hasValue = (value: unknown) =>
+  value !== undefined && value !== null && value !== "";
 
 const readValue = (row: Record<string, any>, key: string): unknown =>
-  key.split(".").reduce<unknown>(
-    (value, pathKey) => (value && typeof value === "object" ? (value as Record<string, any>)[pathKey] : undefined),
-    row
-  );
+  key
+    .split(".")
+    .reduce<unknown>(
+      (value, pathKey) =>
+        value && typeof value === "object"
+          ? (value as Record<string, any>)[pathKey]
+          : undefined,
+      row,
+    );
 
-const pick = (row: Record<string, any>, keys: string[], fallback: string | number = ""): string | number => {
+const pick = (
+  row: Record<string, any>,
+  keys: string[],
+  fallback: string | number = "",
+): string | number => {
   for (const key of keys) {
     const value = readValue(row, key);
-    if (value !== undefined && value !== null && value !== "" && typeof value !== "object") return value as string | number;
+    if (
+      value !== undefined &&
+      value !== null &&
+      value !== "" &&
+      typeof value !== "object"
+    )
+      return value as string | number;
   }
   return fallback;
 };
 
 const getApiRows = (data: any, level: CampaignLevel) => {
   if (Array.isArray(data)) return data;
-  const levelKey = level === "adset" ? "adsets" : level === "ad" ? "ads" : "campaigns";
-  return data?.[levelKey] || data?.results || data?.rows || data?.data || data?.campaigns || [];
+  const levelKey =
+    level === "adset" ? "adsets" : level === "ad" ? "ads" : "campaigns";
+  return (
+    data?.[levelKey] ||
+    data?.results ||
+    data?.rows ||
+    data?.data ||
+    data?.campaigns ||
+    []
+  );
 };
 
 const getRecommendationRows = (data: any) => {
@@ -229,16 +260,50 @@ const latestDateKeys = [
   ...endDateKeys,
 ];
 
-const normalizeRow = (row: Record<string, any>, index: number, level: CampaignLevel): CampaignRow => {
-  const campaignId = pick(row, ["campaign_id", "campaignId", "campaign.id", "campaign_id_meta", "id"]);
-  const adsetId = pick(row, ["adset_id", "adsetId", "adset.id", "adset_id_meta", "id"]);
-  const allocatedBudgetRaw = pick(row, ["allocated_budget", "current_budget", "ai_recommendation.current_budget"], "");
-  const optimizerAction = pick(row, ["recommendation_action", "ai_recommendation.recommendation_action"], "");
-  const optimizerDetail = pick(row, ["recommendation_detail", "explanation", "ai_recommendation.explanation"], "");
-  const nestedRecommendedBudget = readValue(row, "ai_recommendation.recommended_budget");
+const normalizeRow = (
+  row: Record<string, any>,
+  index: number,
+  level: CampaignLevel,
+): CampaignRow => {
+  const campaignId = pick(row, [
+    "campaign_id",
+    "campaignId",
+    "campaign.id",
+    "campaign_id_meta",
+    "id",
+  ]);
+  const adsetId = pick(row, [
+    "adset_id",
+    "adsetId",
+    "adset.id",
+    "adset_id_meta",
+    "id",
+  ]);
+  const allocatedBudgetRaw = pick(
+    row,
+    ["allocated_budget", "current_budget", "ai_recommendation.current_budget"],
+    "",
+  );
+  const optimizerAction = pick(
+    row,
+    ["recommendation_action", "ai_recommendation.recommendation_action"],
+    "",
+  );
+  const optimizerDetail = pick(
+    row,
+    ["recommendation_detail", "explanation", "ai_recommendation.explanation"],
+    "",
+  );
+  const nestedRecommendedBudget = readValue(
+    row,
+    "ai_recommendation.recommended_budget",
+  );
   const flatRecommendedBudget = readValue(row, "recommended_budget");
   const hasOptimizerRecommendation =
-    hasValue(nestedRecommendedBudget) || hasValue(optimizerAction) || hasValue(optimizerDetail) || hasValue(readValue(row, "current_budget"));
+    hasValue(nestedRecommendedBudget) ||
+    hasValue(optimizerAction) ||
+    hasValue(optimizerDetail) ||
+    hasValue(readValue(row, "current_budget"));
   const recommendedBudgetRaw = hasValue(nestedRecommendedBudget)
     ? nestedRecommendedBudget
     : hasOptimizerRecommendation
@@ -248,12 +313,26 @@ const normalizeRow = (row: Record<string, any>, index: number, level: CampaignLe
     pick(
       row,
       level === "campaign"
-        ? ["name", "campaign_name", "campaign.name", "campaign", "utm_campaign", "payload__utm_campaign"]
+        ? [
+            "name",
+            "campaign_name",
+            "campaign.name",
+            "campaign",
+            "utm_campaign",
+            "payload__utm_campaign",
+          ]
         : level === "adset"
-          ? ["name", "adset_name", "adset.name", "adset", "campaign_name", "campaign.name"]
+          ? [
+              "name",
+              "adset_name",
+              "adset.name",
+              "adset",
+              "campaign_name",
+              "campaign.name",
+            ]
           : ["name", "ad_name", "ad.name", "ad", "creative_name"],
-      "Untitled"
-    )
+      "Untitled",
+    ),
   );
 
   return {
@@ -264,11 +343,17 @@ const normalizeRow = (row: Record<string, any>, index: number, level: CampaignLe
         : level === "adset"
           ? ["row_id", "adset_id", "id"]
           : ["row_id", "ad_id", "id"],
-      `${level}-${index}`
+      `${level}-${index}`,
     ),
     raw: row,
     name,
-    source: String(pick(row, ["source", "platform", "utm_source", "payload__utm_source"], "-")),
+    source: String(
+      pick(
+        row,
+        ["source", "platform", "utm_source", "payload__utm_source"],
+        "-",
+      ),
+    ),
     status: String(pick(row, ["status"], "-")),
     pageviews: numberValue(row.pageviews),
     impressions: numberValue(row.impressions),
@@ -286,7 +371,9 @@ const normalizeRow = (row: Record<string, any>, index: number, level: CampaignLe
     lifetime_budget: budgetValue(row.lifetime_budget),
     allocated_budget: budgetValue(allocatedBudgetRaw),
     budget_type: String(pick(row, ["budget_type"], "")),
-    recommended_budget: hasValue(recommendedBudgetRaw) ? budgetValue(recommendedBudgetRaw) : 0,
+    recommended_budget: hasValue(recommendedBudgetRaw)
+      ? budgetValue(recommendedBudgetRaw)
+      : 0,
     has_recommended_budget: hasValue(recommendedBudgetRaw),
     recommendation_action: String(optimizerAction || ""),
     recommendation_detail: String(optimizerDetail || ""),
@@ -301,8 +388,10 @@ const normalizeRow = (row: Record<string, any>, index: number, level: CampaignLe
 };
 
 const rowIdentity = (row: CampaignRow, level: CampaignLevel) => {
-  if (level === "campaign") return `campaign:${row.campaign_id || row.id || row.name}:${row.source}`;
-  if (level === "adset") return `adset:${row.campaign_id || ""}:${row.adset_id || row.id || row.name}:${row.source}`;
+  if (level === "campaign")
+    return `campaign:${row.campaign_id || row.id || row.name}:${row.source}`;
+  if (level === "adset")
+    return `adset:${row.campaign_id || ""}:${row.adset_id || row.id || row.name}:${row.source}`;
   return `ad:${row.campaign_id || ""}:${row.adset_id || ""}:${row.id || row.name}:${row.source}`;
 };
 
@@ -376,26 +465,39 @@ const mergeRowsByLevel = (rows: CampaignRow[], level: CampaignLevel) => {
     });
     const rowIsNewer = latestTimestamp(row) >= latestTimestamp(existing);
     if (rowIsNewer || !existing.allocated_budget) {
-      existing.allocated_budget = row.allocated_budget || existing.allocated_budget;
+      existing.allocated_budget =
+        row.allocated_budget || existing.allocated_budget;
       existing.daily_budget = row.daily_budget || existing.daily_budget;
-      existing.lifetime_budget = row.lifetime_budget || existing.lifetime_budget;
+      existing.lifetime_budget =
+        row.lifetime_budget || existing.lifetime_budget;
       existing.budget_type = row.budget_type || existing.budget_type;
     }
-    if (row.has_recommended_budget && (rowIsNewer || !existing.has_recommended_budget)) {
+    if (
+      row.has_recommended_budget &&
+      (rowIsNewer || !existing.has_recommended_budget)
+    ) {
       existing.recommended_budget = row.recommended_budget;
       existing.has_recommended_budget = true;
-      existing.recommendation_action = row.recommendation_action || existing.recommendation_action;
-      existing.recommendation_detail = row.recommendation_detail || existing.recommendation_detail;
-      existing.budget_recommendation = row.budget_recommendation || existing.budget_recommendation;
+      existing.recommendation_action =
+        row.recommendation_action || existing.recommendation_action;
+      existing.recommendation_detail =
+        row.recommendation_detail || existing.recommendation_detail;
+      existing.budget_recommendation =
+        row.budget_recommendation || existing.budget_recommendation;
     }
     existing.start_date = earliestDate(existing.start_date, row.start_date);
     existing.end_date = latestDate(existing.end_date, row.end_date);
     existing.latest_at = latestDate(existing.latest_at, row.latest_at);
     existing.roas = row.roas || existing.roas;
-    existing.budget_utilization = row.budget_utilization || existing.budget_utilization;
-    existing.ctr = existing.impressions ? (existing.clicks / existing.impressions) * 100 : 0;
+    existing.budget_utilization =
+      row.budget_utilization || existing.budget_utilization;
+    existing.ctr = existing.impressions
+      ? (existing.clicks / existing.impressions) * 100
+      : 0;
     existing.cpc = existing.clicks ? existing.spend / existing.clicks : 0;
-    existing.conversion_rate = existing.pageviews ? (existing.purchases / existing.pageviews) * 100 : 0;
+    existing.conversion_rate = existing.pageviews
+      ? (existing.purchases / existing.pageviews) * 100
+      : 0;
   });
 
   return Array.from(grouped.values());
@@ -411,14 +513,19 @@ const latestTimestamp = (row: CampaignRow) => {
   return Number.isFinite(numericId) ? numericId : 0;
 };
 
-const sortLatestFirst = (rows: CampaignRow[]) => [...rows].sort((first, second) => latestTimestamp(second) - latestTimestamp(first));
+const sortLatestFirst = (rows: CampaignRow[]) =>
+  [...rows].sort(
+    (first, second) => latestTimestamp(second) - latestTimestamp(first),
+  );
 
 const normalizeRows = (data: any, level: CampaignLevel) =>
   sortLatestFirst(
     mergeRowsByLevel(
-      getApiRows(data, level).map((row: Record<string, any>, index: number) => normalizeRow(row, index, level)),
-      level
-    )
+      getApiRows(data, level).map((row: Record<string, any>, index: number) =>
+        normalizeRow(row, index, level),
+      ),
+      level,
+    ),
   );
 
 const recommendationTimestamp = (row: Record<string, any>) => {
@@ -431,12 +538,19 @@ const buildRecommendationMap = (data: any, level: CampaignLevel) => {
   const map = new Map<string, Record<string, any>>();
 
   getRecommendationRows(data).forEach((row: Record<string, any>) => {
-    const entityType = String(pick(row, ["entity_type", "level"], level)).toLowerCase();
-    const entityId = String(pick(row, ["entity_id", "campaign_id", "adset_id", "ad_id"], ""));
+    const entityType = String(
+      pick(row, ["entity_type", "level"], level),
+    ).toLowerCase();
+    const entityId = String(
+      pick(row, ["entity_id", "campaign_id", "adset_id", "ad_id"], ""),
+    );
     if (!entityId || entityType !== level) return;
 
     const existing = map.get(entityId);
-    if (!existing || recommendationTimestamp(row) >= recommendationTimestamp(existing)) {
+    if (
+      !existing ||
+      recommendationTimestamp(row) >= recommendationTimestamp(existing)
+    ) {
       map.set(entityId, row);
     }
   });
@@ -444,24 +558,48 @@ const buildRecommendationMap = (data: any, level: CampaignLevel) => {
   return map;
 };
 
-const applyAiRecommendations = (rows: CampaignRow[], recommendationsData: any, level: CampaignLevel) => {
+const applyAiRecommendations = (
+  rows: CampaignRow[],
+  recommendationsData: any,
+  level: CampaignLevel,
+) => {
   const recommendationMap = buildRecommendationMap(recommendationsData, level);
   if (!recommendationMap.size) return rows;
 
   return rows.map((row) => {
-    const entityId = String(level === "campaign" ? row.campaign_id || row.id : level === "adset" ? row.adset_id || row.id : row.id);
+    const entityId = String(
+      level === "campaign"
+        ? row.campaign_id || row.id
+        : level === "adset"
+          ? row.adset_id || row.id
+          : row.id,
+    );
     const recommendation = recommendationMap.get(entityId);
     if (!recommendation) return row;
 
-    const currentBudget = pick(recommendation, ["current_budget", "allocated_budget"], "");
+    const currentBudget = pick(
+      recommendation,
+      ["current_budget", "allocated_budget"],
+      "",
+    );
     const recommendedBudget = pick(recommendation, ["recommended_budget"], "");
     const action = String(pick(recommendation, ["recommendation_action"], ""));
-    const detail = String(pick(recommendation, ["explanation", "recommendation_detail", "reason_code"], ""));
+    const detail = String(
+      pick(
+        recommendation,
+        ["explanation", "recommendation_detail", "reason_code"],
+        "",
+      ),
+    );
 
     return {
       ...row,
-      allocated_budget: hasValue(currentBudget) ? budgetValue(currentBudget) : row.allocated_budget,
-      recommended_budget: hasValue(recommendedBudget) ? budgetValue(recommendedBudget) : row.recommended_budget,
+      allocated_budget: hasValue(currentBudget)
+        ? budgetValue(currentBudget)
+        : row.allocated_budget,
+      recommended_budget: hasValue(recommendedBudget)
+        ? budgetValue(recommendedBudget)
+        : row.recommended_budget,
       has_recommended_budget: hasValue(recommendedBudget),
       recommendation_action: action,
       recommendation_detail: detail,
@@ -469,16 +607,23 @@ const applyAiRecommendations = (rows: CampaignRow[], recommendationsData: any, l
   });
 };
 
-const normalizeTotals = (data: any) => data?.totals || data?.total || data?.summary || null;
+const normalizeTotals = (data: any) =>
+  data?.totals || data?.total || data?.summary || null;
 
-const totalRow = (rows: CampaignRow[], label = "Total", backendTotals?: Record<string, any> | null): CampaignRow => {
+const totalRow = (
+  rows: CampaignRow[],
+  label = "Total",
+  backendTotals?: Record<string, any> | null,
+): CampaignRow => {
   const totals = rows.reduce(
     (acc, row) => {
       numericFields.forEach((field) => {
         acc[field] += row[field] || 0;
       });
       acc.allocated_budget += row.allocated_budget || 0;
-      acc.recommended_budget += row.has_recommended_budget ? row.recommended_budget || 0 : 0;
+      acc.recommended_budget += row.has_recommended_budget
+        ? row.recommended_budget || 0
+        : 0;
       return acc;
     },
     {
@@ -492,20 +637,38 @@ const totalRow = (rows: CampaignRow[], label = "Total", backendTotals?: Record<s
       revenue: 0,
       allocated_budget: 0,
       recommended_budget: 0,
-    } as Record<(typeof numericFields)[number] | "allocated_budget" | "recommended_budget", number>
+    } as Record<
+      | (typeof numericFields)[number]
+      | "allocated_budget"
+      | "recommended_budget",
+      number
+    >,
   );
 
   const resolvedTotals = {
     pageviews: numberWithFallback(backendTotals?.pageviews, totals.pageviews),
-    impressions: numberWithFallback(backendTotals?.impressions, totals.impressions),
+    impressions: numberWithFallback(
+      backendTotals?.impressions,
+      totals.impressions,
+    ),
     reach: numberWithFallback(backendTotals?.reach, totals.reach),
     clicks: numberWithFallback(backendTotals?.clicks, totals.clicks),
     spend: numberWithFallback(backendTotals?.spend, totals.spend),
     initiated: numberWithFallback(backendTotals?.initiated, totals.initiated),
     purchases: numberWithFallback(backendTotals?.purchases, totals.purchases),
     revenue: numberWithFallback(backendTotals?.revenue, totals.revenue),
-    allocated_budget: totals.allocated_budget || budgetWithFallback(backendTotals?.allocated_budget, totals.allocated_budget),
-    recommended_budget: totals.recommended_budget || budgetWithFallback(backendTotals?.recommended_budget, totals.recommended_budget),
+    allocated_budget:
+      totals.allocated_budget ||
+      budgetWithFallback(
+        backendTotals?.allocated_budget,
+        totals.allocated_budget,
+      ),
+    recommended_budget:
+      totals.recommended_budget ||
+      budgetWithFallback(
+        backendTotals?.recommended_budget,
+        totals.recommended_budget,
+      ),
   };
 
   return {
@@ -515,17 +678,33 @@ const totalRow = (rows: CampaignRow[], label = "Total", backendTotals?: Record<s
     source: "",
     status: "",
     ...resolvedTotals,
-    ctr: resolvedTotals.impressions ? (resolvedTotals.clicks / resolvedTotals.impressions) * 100 : 0,
-    cpc: resolvedTotals.clicks ? resolvedTotals.spend / resolvedTotals.clicks : 0,
+    ctr: resolvedTotals.impressions
+      ? (resolvedTotals.clicks / resolvedTotals.impressions) * 100
+      : 0,
+    cpc: resolvedTotals.clicks
+      ? resolvedTotals.spend / resolvedTotals.clicks
+      : 0,
     roas: numberValue(backendTotals?.roas),
-    conversion_rate: resolvedTotals.pageviews ? (resolvedTotals.purchases / resolvedTotals.pageviews) * 100 : 0,
+    conversion_rate: resolvedTotals.pageviews
+      ? (resolvedTotals.purchases / resolvedTotals.pageviews) * 100
+      : 0,
     daily_budget: 0,
     lifetime_budget: 0,
     budget_type: "",
     has_recommended_budget: hasValue(backendTotals?.recommended_budget),
-    recommendation_action: String(pick(backendTotals || {}, ["recommendation_action", "budget_recommendation"], "")),
-    recommendation_detail: String(pick(backendTotals || {}, ["recommendation_detail"], "")),
-    budget_recommendation: String(pick(backendTotals || {}, ["budget_recommendation"], "")),
+    recommendation_action: String(
+      pick(
+        backendTotals || {},
+        ["recommendation_action", "budget_recommendation"],
+        "",
+      ),
+    ),
+    recommendation_detail: String(
+      pick(backendTotals || {}, ["recommendation_detail"], ""),
+    ),
+    budget_recommendation: String(
+      pick(backendTotals || {}, ["budget_recommendation"], ""),
+    ),
     budget_utilization: numberValue(backendTotals?.budget_utilization),
     start_date: "",
     end_date: "",
@@ -545,7 +724,8 @@ const formatMoney = (value: number) =>
 const formatPercent = (value: number) => `${(value || 0).toFixed(2)}%`;
 const formatDecimal = (value: number) => (value || 0).toFixed(2);
 const formatRoas = (value: number) => `${formatDecimal(value)}x`;
-const formatBudgetUtilization = (value: number) => `${(value || 0).toFixed(1)}%`;
+const formatBudgetUtilization = (value: number) =>
+  `${(value || 0).toFixed(1)}%`;
 const formatBudgetType = (value: string) => {
   const normalized = value.toLowerCase();
   if (normalized === "daily") return "Daily";
@@ -578,7 +758,10 @@ const getDateRange = (range: string) => {
 };
 
 const getApiErrorMessage = (error: unknown) => {
-  const data = typeof error === "object" && error && "data" in error ? (error as { data?: unknown }).data : null;
+  const data =
+    typeof error === "object" && error && "data" in error
+      ? (error as { data?: unknown }).data
+      : null;
 
   if (typeof data === "string") return data;
   if (data && typeof data === "object") {
@@ -613,9 +796,22 @@ function StatusBadge({ status }: { status: string }) {
         ? "warning"
         : "default";
 
-  const label = normalized === "active" ? "Active" : normalized === "inactive" ? "Inactive" : status;
+  const label =
+    normalized === "active"
+      ? "Active"
+      : normalized === "inactive"
+        ? "Inactive"
+        : status;
 
-  return <Chip size="small" label={label} color={color} variant="outlined" sx={{ height: 22, fontSize: 11 }} />;
+  return (
+    <Chip
+      size="small"
+      label={label}
+      color={color}
+      variant="outlined"
+      sx={{ height: 22, fontSize: 11 }}
+    />
+  );
 }
 
 const displayRecommendationAction = (row: CampaignRow) => {
@@ -631,18 +827,41 @@ const displayRecommendationAction = (row: CampaignRow) => {
   return "decrease";
 };
 
-function RecommendationBadge({ recommendation, detail }: { recommendation: string; detail?: string }) {
+function RecommendationBadge({
+  recommendation,
+  detail,
+}: {
+  recommendation: string;
+  detail?: string;
+}) {
   const normalized = recommendation.toLowerCase().replace(/\s+/g, "_");
-  const config: Record<string, { label: string; color: "success" | "error" | "warning" | "info" | "default" }> = {
+  const config: Record<
+    string,
+    {
+      label: string;
+      color: "success" | "error" | "warning" | "info" | "default";
+    }
+  > = {
     increase: { label: "Increase", color: "success" },
     decrease: { label: "Decrease", color: "error" },
     monitor: { label: "Monitor", color: "warning" },
     maintain: { label: "Maintain", color: "info" },
     no_budget: { label: "No Budget", color: "default" },
   };
-  const badge = config[normalized] || { label: recommendation || "-", color: "default" as const };
+  const badge = config[normalized] || {
+    label: recommendation || "-",
+    color: "default" as const,
+  };
 
-  const chip = <Chip size="small" label={badge.label} color={badge.color} variant="outlined" sx={{ height: 22, fontSize: 11 }} />;
+  const chip = (
+    <Chip
+      size="small"
+      label={badge.label}
+      color={badge.color}
+      variant="outlined"
+      sx={{ height: 22, fontSize: 11 }}
+    />
+  );
 
   return detail ? (
     <Tooltip title={detail} arrow>
@@ -667,17 +886,30 @@ function DenseMetricTable({
   const displayRows = rows.length ? [...rows, totalRow(rows)] : [];
 
   return (
-    <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+    <TableContainer
+      sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}
+    >
       <Table size="small">
         <TableHead>
           <TableRow sx={{ bgcolor: "#F7F9FC" }}>
-            {["Name", "Status", "PageViews", "Impr.", "Reach", "Clicks", "CTR", "CPC", "Spend", "Purchases", "Revenue", "ROAS"].map(
-              (header) => (
-                <TableCell key={header} sx={{ ...tableCellSx, fontWeight: 600 }}>
-                  {header}
-                </TableCell>
-              )
-            )}
+            {[
+              "Name",
+              "Status",
+              "PageViews",
+              "Impr.",
+              "Reach",
+              "Clicks",
+              "CTR",
+              "CPC",
+              "Spend",
+              "Purchases",
+              "Revenue",
+              "ROAS",
+            ].map((header) => (
+              <TableCell key={header} sx={{ ...tableCellSx, fontWeight: 600 }}>
+                {header}
+              </TableCell>
+            ))}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -699,29 +931,52 @@ function DenseMetricTable({
                   sx={{
                     cursor: onRowClick && !row.isTotal ? "pointer" : "default",
                     bgcolor: row.isTotal ? "action.hover" : "inherit",
-                    "& .MuiTableCell-root": { fontWeight: row.isTotal ? 700 : 400 },
+                    "& .MuiTableCell-root": {
+                      fontWeight: row.isTotal ? 700 : 400,
+                    },
                   }}
                 >
-                  <TableCell sx={{ ...tableCellSx, minWidth: 170 }}>{row.name}</TableCell>
+                  <TableCell sx={{ ...tableCellSx, minWidth: 170 }}>
+                    {row.name}
+                  </TableCell>
                   <TableCell sx={tableCellSx}>
                     <StatusBadge status={displayStatus(row)} />
                   </TableCell>
-                  <TableCell sx={tableCellSx}>{formatNumber(row.pageviews)}</TableCell>
-                  <TableCell sx={tableCellSx}>{formatNumber(row.impressions)}</TableCell>
-                  <TableCell sx={tableCellSx}>{formatNumber(row.reach)}</TableCell>
-                  <TableCell sx={tableCellSx}>{formatNumber(row.clicks)}</TableCell>
-                  <TableCell sx={tableCellSx}>{formatPercent(row.ctr)}</TableCell>
+                  <TableCell sx={tableCellSx}>
+                    {formatNumber(row.pageviews)}
+                  </TableCell>
+                  <TableCell sx={tableCellSx}>
+                    {formatNumber(row.impressions)}
+                  </TableCell>
+                  <TableCell sx={tableCellSx}>
+                    {formatNumber(row.reach)}
+                  </TableCell>
+                  <TableCell sx={tableCellSx}>
+                    {formatNumber(row.clicks)}
+                  </TableCell>
+                  <TableCell sx={tableCellSx}>
+                    {formatPercent(row.ctr)}
+                  </TableCell>
                   <TableCell sx={tableCellSx}>{formatMoney(row.cpc)}</TableCell>
-                  <TableCell sx={tableCellSx}>{formatMoney(row.spend)}</TableCell>
-                  <TableCell sx={tableCellSx}>{formatNumber(row.purchases)}</TableCell>
-                  <TableCell sx={tableCellSx}>{formatMoney(row.revenue)}</TableCell>
+                  <TableCell sx={tableCellSx}>
+                    {formatMoney(row.spend)}
+                  </TableCell>
+                  <TableCell sx={tableCellSx}>
+                    {formatNumber(row.purchases)}
+                  </TableCell>
+                  <TableCell sx={tableCellSx}>
+                    {formatMoney(row.revenue)}
+                  </TableCell>
                   <TableCell sx={tableCellSx}>{formatRoas(row.roas)}</TableCell>
                 </TableRow>
               ))}
 
           {!loading && !rows.length ? (
             <TableRow>
-              <TableCell colSpan={12} sx={{ py: 5, textAlign: "center", color: "text.secondary" }}>
+              <TableCell
+                colSpan={12}
+                sx={{ py: 5, textAlign: "center", color: "text.secondary" }}
+              >
                 {emptyText}
               </TableCell>
             </TableRow>
@@ -734,7 +989,14 @@ function DenseMetricTable({
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <Box sx={{ p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+    <Box
+      sx={{
+        p: 1.5,
+        border: "1px solid",
+        borderColor: "divider",
+        borderRadius: 2,
+      }}
+    >
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
@@ -756,11 +1018,19 @@ export default function CampaignsPage() {
   const [status, setStatus] = useState("all");
   const [mainLevel, setMainLevel] = useState<CampaignLevel>("campaign");
   const [drawerTab, setDrawerTab] = useState<DrawerTab>("adsets");
-  const [selectedCampaign, setSelectedCampaign] = useState<CampaignRow | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignRow | null>(
+    null,
+  );
   const [selectedAdset, setSelectedAdset] = useState<CampaignRow | null>(null);
-  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 10 });
+  const [paginationModel, setPaginationModel] = useState({
+    page: 0,
+    pageSize: 10,
+  });
   const [generationError, setGenerationError] = useState("");
-  const [generateAiRecommendations, { isLoading: isGeneratingRecommendations }] = useGenerateAiRecommendationsMutation();
+  const [
+    generateAiRecommendations,
+    { isLoading: isGeneratingRecommendations },
+  ] = useGenerateAiRecommendationsMutation();
 
   const campaignId = selectedCampaign?.campaign_id || selectedCampaign?.id;
   const adsetId = selectedAdset?.adset_id || selectedAdset?.id;
@@ -773,86 +1043,165 @@ export default function CampaignsPage() {
     status,
   });
 
-  const { currentData: recommendationsData, refetch: refetchRecommendations } = useGetAiRecommendationsQuery({
-    entity_type: mainLevel,
-    platform,
-  });
-
-  const { currentData: adsetsData, isFetching: isAdsetsFetching } = useGetDashboardCampaignsQuery(
-    {
-      level: "adset",
-      campaign_id: campaignId,
-      range,
+  const { currentData: recommendationsData, refetch: refetchRecommendations } =
+    useGetAiRecommendationsQuery({
+      entity_type: mainLevel,
       platform,
-      status,
-    },
-    { skip: !campaignId }
-  );
+    });
 
-  const { currentData: adsetRecommendationsData } = useGetAiRecommendationsQuery(
-    {
-      entity_type: "adset",
-      platform,
-    },
-    { skip: !campaignId }
-  );
+  const { currentData: adsetsData, isFetching: isAdsetsFetching } =
+    useGetDashboardCampaignsQuery(
+      {
+        level: "adset",
+        campaign_id: campaignId,
+        range,
+        platform,
+        status,
+      },
+      { skip: !campaignId },
+    );
 
-  const { currentData: adsData, isFetching: isAdsFetching } = useGetDashboardCampaignsQuery(
-    {
-      level: "ad",
-      campaign_id: campaignId,
-      adset_id: adsetId,
-      range,
-      platform,
-      status,
-    },
-    { skip: !campaignId }
-  );
+  const { currentData: adsetRecommendationsData } =
+    useGetAiRecommendationsQuery(
+      {
+        entity_type: "adset",
+        platform,
+      },
+      { skip: !campaignId },
+    );
+
+  const { currentData: adsData, isFetching: isAdsFetching } =
+    useGetDashboardCampaignsQuery(
+      {
+        level: "ad",
+        campaign_id: campaignId,
+        adset_id: adsetId,
+        range,
+        platform,
+        status,
+      },
+      { skip: !campaignId },
+    );
 
   const { currentData: adRecommendationsData } = useGetAiRecommendationsQuery(
     {
       entity_type: "ad",
       platform,
     },
-    { skip: !adsetId }
+    { skip: !adsetId },
   );
 
   const rows = useMemo(
-    () => applyAiRecommendations(normalizeRows(currentData, mainLevel), recommendationsData, mainLevel),
-    [currentData, mainLevel, recommendationsData]
+    () =>
+      applyAiRecommendations(
+        normalizeRows(currentData, mainLevel),
+        recommendationsData,
+        mainLevel,
+      ),
+    [currentData, mainLevel, recommendationsData],
   );
   const adsetRows = useMemo(
-    () => applyAiRecommendations(normalizeRows(adsetsData, "adset"), adsetRecommendationsData, "adset"),
-    [adsetsData, adsetRecommendationsData]
+    () =>
+      applyAiRecommendations(
+        normalizeRows(adsetsData, "adset"),
+        adsetRecommendationsData,
+        "adset",
+      ),
+    [adsetsData, adsetRecommendationsData],
   );
   const adRows = useMemo(
-    () => applyAiRecommendations(normalizeRows(adsData, "ad"), adRecommendationsData, "ad"),
-    [adsData, adRecommendationsData]
+    () =>
+      applyAiRecommendations(
+        normalizeRows(adsData, "ad"),
+        adRecommendationsData,
+        "ad",
+      ),
+    [adsData, adRecommendationsData],
   );
-  const drawerTotals = totalRow(selectedAdset ? adRows : adsetRows, "Total", normalizeTotals(selectedAdset ? adsData : adsetsData));
-  const mainTotals = useMemo(() => totalRow(rows, "Total", normalizeTotals(currentData)), [currentData, rows]);
+  const drawerTotals = totalRow(
+    selectedAdset ? adRows : adsetRows,
+    "Total",
+    normalizeTotals(selectedAdset ? adsData : adsetsData),
+  );
+  const mainTotals = useMemo(
+    () => totalRow(rows, "Total", normalizeTotals(currentData)),
+    [currentData, rows],
+  );
   const resetSelections = () => {
     setSelectedCampaign(null);
     setSelectedAdset(null);
   };
 
   const columns: GridColDef[] = [
-    { field: "name", headerName: mainLevel === "campaign" ? "Campaign" : mainLevel === "adset" ? "Ad Set" : "Ad", minWidth: 220, flex: 1 },
+    {
+      field: "name",
+      headerName:
+        mainLevel === "campaign"
+          ? "Campaign"
+          : mainLevel === "adset"
+            ? "Ad Set"
+            : "Ad",
+      minWidth: 220,
+      flex: 1,
+    },
     { field: "source", headerName: "Source", width: 100 },
     {
       field: "status",
       headerName: "Status",
       width: 105,
-      renderCell: (params) => (params.row.isTotal ? null : <StatusBadge status={displayStatus(params.row)} />),
+      renderCell: (params) =>
+        params.row.isTotal ? null : (
+          <StatusBadge status={displayStatus(params.row)} />
+        ),
     },
-    { field: "start_date", headerName: "Start", width: 115, valueFormatter: (value) => formatDate(String(value || "")) },
-    { field: "end_date", headerName: "End", width: 115, valueFormatter: (value) => formatDate(String(value || "")) },
-    { field: "pageviews", headerName: "PageViews", width: 105, valueFormatter: (value) => formatNumber(numberValue(value)) },
-    { field: "impressions", headerName: "Impressions", width: 115, valueFormatter: (value) => formatNumber(numberValue(value)) },
-    { field: "reach", headerName: "Reach", width: 95, valueFormatter: (value) => formatNumber(numberValue(value)) },
-    { field: "clicks", headerName: "Clicks", width: 90, valueFormatter: (value) => formatNumber(numberValue(value)) },
-    { field: "ctr", headerName: "CTR", width: 85, valueFormatter: (value) => formatPercent(numberValue(value)) },
-    { field: "cpc", headerName: "CPC", width: 85, valueFormatter: (value) => formatMoney(numberValue(value)) },
+    {
+      field: "start_date",
+      headerName: "Start",
+      width: 115,
+      valueFormatter: (value) => formatDate(String(value || "")),
+    },
+    {
+      field: "end_date",
+      headerName: "End",
+      width: 115,
+      valueFormatter: (value) => formatDate(String(value || "")),
+    },
+    {
+      field: "pageviews",
+      headerName: "PageViews",
+      width: 105,
+      valueFormatter: (value) => formatNumber(numberValue(value)),
+    },
+    {
+      field: "impressions",
+      headerName: "Impressions",
+      width: 115,
+      valueFormatter: (value) => formatNumber(numberValue(value)),
+    },
+    {
+      field: "reach",
+      headerName: "Reach",
+      width: 95,
+      valueFormatter: (value) => formatNumber(numberValue(value)),
+    },
+    {
+      field: "clicks",
+      headerName: "Clicks",
+      width: 90,
+      valueFormatter: (value) => formatNumber(numberValue(value)),
+    },
+    {
+      field: "ctr",
+      headerName: "CTR",
+      width: 85,
+      valueFormatter: (value) => formatPercent(numberValue(value)),
+    },
+    {
+      field: "cpc",
+      headerName: "CPC",
+      width: 85,
+      valueFormatter: (value) => formatMoney(numberValue(value)),
+    },
     {
       field: "allocated_budget",
       headerName: "Budget",
@@ -863,8 +1212,10 @@ export default function CampaignsPage() {
       field: "recommended_budget",
       headerName: "AI Rec",
       width: 125,
-      valueGetter: (_value, row) => (row.has_recommended_budget ? row.recommended_budget : null),
-      valueFormatter: (value) => (hasValue(value) ? formatMoney(numberValue(value)) : "-"),
+      valueGetter: (_value, row) =>
+        row.has_recommended_budget ? row.recommended_budget : null,
+      valueFormatter: (value) =>
+        hasValue(value) ? formatMoney(numberValue(value)) : "-",
     },
     {
       field: "recommendation_action",
@@ -873,7 +1224,10 @@ export default function CampaignsPage() {
       renderCell: (params) => {
         const action = displayRecommendationAction(params.row);
         return params.row.has_recommended_budget && action ? (
-          <RecommendationBadge recommendation={action} detail={params.row.recommendation_detail} />
+          <RecommendationBadge
+            recommendation={action}
+            detail={params.row.recommendation_detail}
+          />
         ) : null;
       },
     },
@@ -883,18 +1237,48 @@ export default function CampaignsPage() {
       width: 120,
       valueFormatter: (value) => formatBudgetType(String(value || "")),
     },
-    { field: "spend", headerName: "Spend", width: 125, valueFormatter: (value) => formatMoney(numberValue(value)) },
-    { field: "initiated", headerName: "Initiated", width: 105, valueFormatter: (value) => formatNumber(numberValue(value)) },
-    { field: "purchases", headerName: "Purchases", width: 105, valueFormatter: (value) => formatNumber(numberValue(value)) },
-    { field: "revenue", headerName: "Revenue", width: 125, valueFormatter: (value) => formatMoney(numberValue(value)) },
-    { field: "roas", headerName: "ROAS", width: 85, valueFormatter: (value) => formatRoas(numberValue(value)) },
+    {
+      field: "spend",
+      headerName: "Spend",
+      width: 125,
+      valueFormatter: (value) => formatMoney(numberValue(value)),
+    },
+    {
+      field: "initiated",
+      headerName: "Initiated",
+      width: 105,
+      valueFormatter: (value) => formatNumber(numberValue(value)),
+    },
+    {
+      field: "purchases",
+      headerName: "Purchases",
+      width: 105,
+      valueFormatter: (value) => formatNumber(numberValue(value)),
+    },
+    {
+      field: "revenue",
+      headerName: "Revenue",
+      width: 125,
+      valueFormatter: (value) => formatMoney(numberValue(value)),
+    },
+    {
+      field: "roas",
+      headerName: "ROAS",
+      width: 85,
+      valueFormatter: (value) => formatRoas(numberValue(value)),
+    },
     {
       field: "budget_utilization",
       headerName: "Budget Utilization",
       width: 155,
       valueFormatter: (value) => formatBudgetUtilization(numberValue(value)),
     },
-    { field: "conversion_rate", headerName: "Conv. Rate (%)", width: 130, valueFormatter: (value) => formatPercent(numberValue(value)) },
+    {
+      field: "conversion_rate",
+      headerName: "Conv. Rate (%)",
+      width: 130,
+      valueFormatter: (value) => formatPercent(numberValue(value)),
+    },
   ];
   const tableRows = rows;
 
@@ -942,14 +1326,28 @@ export default function CampaignsPage() {
   };
 
   return (
-    <Stack spacing={3} sx={{ minWidth: 0, maxWidth: "100%", overflowX: "hidden" }}>
-      <Typography variant="h4" fontWeight={600}>
-        {role === "agency" ? "Client Campaign Overview" : "My Campaign Performance"}
+    <Stack
+      spacing={3}
+      sx={{ minWidth: 0, maxWidth: "100%", overflowX: "hidden" }}
+    >
+      <Typography variant="h4" sx={dashboardTitleSx}>
+        {role === "agency"
+          ? "Client Campaign Overview"
+          : "My Campaign Performance"}
       </Typography>
 
       <Box sx={panelSx}>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} useFlexGap flexWrap="wrap" alignItems={{ sm: "flex-end" }}>
-          <FormControl size="small" sx={{ flex: { xs: "1 1 100%", sm: "1 1 170px", lg: "0 0 170px" } }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          useFlexGap
+          flexWrap="wrap"
+          alignItems={{ sm: "flex-end" }}
+        >
+          <FormControl
+            size="small"
+            sx={{ flex: { xs: "1 1 100%", sm: "1 1 170px", lg: "0 0 170px" } }}
+          >
             <Typography variant="caption" sx={{ mb: 0.5 }}>
               Date Range
             </Typography>
@@ -968,7 +1366,10 @@ export default function CampaignsPage() {
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ flex: { xs: "1 1 100%", sm: "1 1 160px", lg: "0 0 160px" } }}>
+          <FormControl
+            size="small"
+            sx={{ flex: { xs: "1 1 100%", sm: "1 1 160px", lg: "0 0 160px" } }}
+          >
             <Typography variant="caption" sx={{ mb: 0.5 }}>
               Platform
             </Typography>
@@ -984,7 +1385,10 @@ export default function CampaignsPage() {
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ flex: { xs: "1 1 100%", sm: "1 1 160px", lg: "0 0 160px" } }}>
+          <FormControl
+            size="small"
+            sx={{ flex: { xs: "1 1 100%", sm: "1 1 160px", lg: "0 0 160px" } }}
+          >
             <Typography variant="caption" sx={{ mb: 0.5 }}>
               Status
             </Typography>
@@ -1001,7 +1405,9 @@ export default function CampaignsPage() {
             </Select>
           </FormControl>
 
-          <Box sx={{ flex: { xs: "1 1 100%", sm: "1 1 300px", lg: "0 0 300px" } }}>
+          <Box
+            sx={{ flex: { xs: "1 1 100%", sm: "1 1 300px", lg: "0 0 300px" } }}
+          >
             <Typography variant="caption" sx={{ mb: 0.5, display: "block" }}>
               Level
             </Typography>
@@ -1030,21 +1436,41 @@ export default function CampaignsPage() {
             disabled={isGeneratingRecommendations}
             sx={{ alignSelf: { xs: "stretch", sm: "flex-end" }, minHeight: 40 }}
           >
-            {isGeneratingRecommendations ? "Generating..." : "Generate AI Recommendations"}
+            {isGeneratingRecommendations
+              ? "Generating..."
+              : "Generate AI Recommendations"}
           </Button>
         </Stack>
         {generationError ? (
-          <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>
+          <Typography
+            variant="caption"
+            color="error"
+            sx={{ display: "block", mt: 1 }}
+          >
             {generationError}
           </Typography>
         ) : null}
       </Box>
 
-      <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 2, overflow: "hidden", minWidth: 0 }}>
-        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
+      <Paper
+        sx={{
+          p: { xs: 1.5, sm: 2 },
+          borderRadius: 2,
+          overflow: "hidden",
+          minWidth: 0,
+        }}
+      >
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          spacing={1}
+          sx={{ mb: 1.5 }}
+        >
           <Typography variant="h6">{levelLabels[mainLevel]}</Typography>
           <Typography variant="caption" color="text.secondary">
-            {mainLevel === "campaign" ? "Click a campaign to inspect ad sets and ads" : "Totals only include the selected level"}
+            {mainLevel === "campaign"
+              ? "Click a campaign to inspect ad sets and ads"
+              : "Totals only include the selected level"}
           </Typography>
         </Stack>
 
@@ -1076,10 +1502,16 @@ export default function CampaignsPage() {
             density="compact"
             disableColumnMenu
             paginationModel={paginationModel}
-            onPaginationModelChange={(model) => setPaginationModel({ page: model.page, pageSize: 10 })}
+            onPaginationModelChange={(model) =>
+              setPaginationModel({ page: model.page, pageSize: 10 })
+            }
             pageSizeOptions={[10]}
-            localeText={{ noRowsLabel: `No ${levelLabels[mainLevel].toLowerCase()} found` }}
-            getRowClassName={(params) => (params.row.isTotal ? "total-row" : "")}
+            localeText={{
+              noRowsLabel: `No ${levelLabels[mainLevel].toLowerCase()} found`,
+            }}
+            getRowClassName={(params) =>
+              params.row.isTotal ? "total-row" : ""
+            }
             sx={{
               minWidth: 2200,
               width: "max-content",
@@ -1101,7 +1533,8 @@ export default function CampaignsPage() {
                 minHeight: 42,
               },
               "& .MuiDataGrid-row:hover": {
-                bgcolor: mainLevel === "campaign" ? "rgba(94,53,177,0.04)" : "inherit",
+                bgcolor:
+                  mainLevel === "campaign" ? "rgba(94,53,177,0.04)" : "inherit",
               },
               "& .total-row": {
                 bgcolor: "action.hover",
@@ -1113,56 +1546,72 @@ export default function CampaignsPage() {
             }}
           />
         </Box>
-          {rows.length ? (
-            <Stack
-              direction="row"
-              spacing={1}
-              useFlexGap
-              flexWrap="wrap"
-              sx={{
-                px: { xs: 1, sm: 1.5 },
-                py: 1,
-                mt: 0.5,
-                bgcolor: "action.hover",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 2,
-              }}
-            >
-              {[
-                ["Total PageViews", formatNumber(mainTotals.pageviews)],
-                ["Impressions", formatNumber(mainTotals.impressions)],
-                ["Reach", formatNumber(mainTotals.reach)],
-                ["Clicks", formatNumber(mainTotals.clicks)],
-                ["Allocated Budget", formatMoney(mainTotals.allocated_budget)],
-                ["Spend", formatMoney(mainTotals.spend)],
-                ["Revenue", formatMoney(mainTotals.revenue)],
-                ["Recommended Budget", formatMoney(mainTotals.recommended_budget)],
-                ["ROAS", formatRoas(mainTotals.roas)],
-                ["Budget Utilization", formatBudgetUtilization(mainTotals.budget_utilization)],
-              ].map(([label, value]) => (
-                <Box
-                  key={label}
+        {rows.length ? (
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            flexWrap="wrap"
+            sx={{
+              px: { xs: 1, sm: 1.5 },
+              py: 1,
+              mt: 0.5,
+              bgcolor: "action.hover",
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 2,
+            }}
+          >
+            {[
+              ["Total PageViews", formatNumber(mainTotals.pageviews)],
+              ["Impressions", formatNumber(mainTotals.impressions)],
+              ["Reach", formatNumber(mainTotals.reach)],
+              ["Clicks", formatNumber(mainTotals.clicks)],
+              ["Allocated Budget", formatMoney(mainTotals.allocated_budget)],
+              ["Spend", formatMoney(mainTotals.spend)],
+              ["Revenue", formatMoney(mainTotals.revenue)],
+              [
+                "Recommended Budget",
+                formatMoney(mainTotals.recommended_budget),
+              ],
+              ["ROAS", formatRoas(mainTotals.roas)],
+              [
+                "Budget Utilization",
+                formatBudgetUtilization(mainTotals.budget_utilization),
+              ],
+            ].map(([label, value]) => (
+              <Box
+                key={label}
+                sx={{
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 1,
+                  bgcolor: "background.paper",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  minWidth: { xs: "calc(50% - 4px)", sm: "auto" },
+                }}
+              >
+                <Typography
+                  variant="caption"
                   sx={{
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: 1,
-                    bgcolor: "background.paper",
-                    border: "1px solid",
-                    borderColor: "divider",
-                    minWidth: { xs: "calc(50% - 4px)", sm: "auto" },
+                    display: "block",
+                    color: "text.secondary",
+                    lineHeight: 1.2,
                   }}
                 >
-                  <Typography variant="caption" sx={{ display: "block", color: "text.secondary", lineHeight: 1.2 }}>
-                    {label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ display: "block", fontWeight: 700, lineHeight: 1.3 }}>
-                    {value}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-          ) : null}
+                  {label}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ display: "block", fontWeight: 700, lineHeight: 1.3 }}
+                >
+                  {value}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        ) : null}
       </Paper>
 
       <Drawer
@@ -1179,23 +1628,44 @@ export default function CampaignsPage() {
       >
         {selectedCampaign ? (
           <Stack sx={{ height: "100%" }}>
-            <Box sx={{ p: 2.5, borderBottom: "1px solid", borderColor: "divider" }}>
-              <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
+            <Box
+              sx={{ p: 2.5, borderBottom: "1px solid", borderColor: "divider" }}
+            >
+              <Stack
+                direction="row"
+                alignItems="flex-start"
+                justifyContent="space-between"
+                spacing={2}
+              >
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="h5" sx={{ fontWeight: 700 }} noWrap>
                     {selectedCampaign.name}
                   </Typography>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={{ mt: 1 }}
+                  >
                     <StatusBadge status={displayStatus(selectedCampaign)} />
                     <Typography variant="caption" color="text.secondary">
                       {selectedCampaign.source}
                     </Typography>
                   </Stack>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.75 }}>
-                    {formatDate(selectedCampaign.start_date)} - {formatDate(selectedCampaign.end_date)}
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mt: 0.75 }}
+                  >
+                    {formatDate(selectedCampaign.start_date)} -{" "}
+                    {formatDate(selectedCampaign.end_date)}
                   </Typography>
                 </Box>
-                <IconButton size="small" onClick={closeDrawer} aria-label="Close campaign drawer">
+                <IconButton
+                  size="small"
+                  onClick={closeDrawer}
+                  aria-label="Close campaign drawer"
+                >
                   <CloseIcon fontSize="small" />
                 </IconButton>
               </Stack>
@@ -1223,7 +1693,11 @@ export default function CampaignsPage() {
               </Breadcrumbs>
             </Box>
 
-            <Tabs value={drawerTab} onChange={(_, value) => setDrawerTab(value)} sx={{ px: 2, borderBottom: "1px solid", borderColor: "divider" }}>
+            <Tabs
+              value={drawerTab}
+              onChange={(_, value) => setDrawerTab(value)}
+              sx={{ px: 2, borderBottom: "1px solid", borderColor: "divider" }}
+            >
               <Tab value="overview" label="Overview" />
               <Tab value="adsets" label="Ad Sets" />
               <Tab value="ads" label="Ads" />
@@ -1231,19 +1705,51 @@ export default function CampaignsPage() {
 
             <Box sx={{ p: 2, overflow: "auto", flex: 1 }}>
               {drawerTab === "overview" ? (
-                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" }, gap: 1.5 }}>
-                  <MetricCard label="Spend" value={formatMoney(selectedCampaign.spend)} />
-                  <MetricCard label="Clicks" value={formatNumber(selectedCampaign.clicks)} />
-                  <MetricCard label="PageViews" value={formatNumber(selectedCampaign.pageviews)} />
-                  <MetricCard label="Initiated" value={formatNumber(selectedCampaign.initiated)} />
-                  <MetricCard label="Purchases" value={formatNumber(selectedCampaign.purchases)} />
-                  <MetricCard label="Revenue" value={formatMoney(selectedCampaign.revenue)} />
-                  <MetricCard label="ROAS" value={formatRoas(selectedCampaign.roas)} />
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)" },
+                    gap: 1.5,
+                  }}
+                >
+                  <MetricCard
+                    label="Spend"
+                    value={formatMoney(selectedCampaign.spend)}
+                  />
+                  <MetricCard
+                    label="Clicks"
+                    value={formatNumber(selectedCampaign.clicks)}
+                  />
+                  <MetricCard
+                    label="PageViews"
+                    value={formatNumber(selectedCampaign.pageviews)}
+                  />
+                  <MetricCard
+                    label="Initiated"
+                    value={formatNumber(selectedCampaign.initiated)}
+                  />
+                  <MetricCard
+                    label="Purchases"
+                    value={formatNumber(selectedCampaign.purchases)}
+                  />
+                  <MetricCard
+                    label="Revenue"
+                    value={formatMoney(selectedCampaign.revenue)}
+                  />
+                  <MetricCard
+                    label="ROAS"
+                    value={formatRoas(selectedCampaign.roas)}
+                  />
                 </Box>
               ) : null}
 
               {drawerTab === "adsets" ? (
-                <DenseMetricTable rows={adsetRows} loading={isAdsetsFetching} emptyText="No adsets found" onRowClick={selectAdset} />
+                <DenseMetricTable
+                  rows={adsetRows}
+                  loading={isAdsetsFetching}
+                  emptyText="No adsets found"
+                  onRowClick={selectAdset}
+                />
               ) : null}
 
               {drawerTab === "ads" ? (
@@ -1253,12 +1759,24 @@ export default function CampaignsPage() {
                       Ads in {selectedAdset.name}
                     </Typography>
                   ) : null}
-                  <DenseMetricTable rows={adRows} loading={isAdsFetching} emptyText="No ads found" />
+                  <DenseMetricTable
+                    rows={adRows}
+                    loading={isAdsFetching}
+                    emptyText="No ads found"
+                  />
                 </Stack>
               ) : null}
             </Box>
 
-            <Box sx={{ px: 2, py: 1.5, borderTop: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
+            <Box
+              sx={{
+                px: 2,
+                py: 1.5,
+                borderTop: "1px solid",
+                borderColor: "divider",
+                bgcolor: "background.paper",
+              }}
+            >
               <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
                 <Typography variant="caption">
                   Spend: <strong>{formatMoney(drawerTotals.spend)}</strong>
@@ -1267,7 +1785,8 @@ export default function CampaignsPage() {
                   Clicks: <strong>{formatNumber(drawerTotals.clicks)}</strong>
                 </Typography>
                 <Typography variant="caption">
-                  Purchases: <strong>{formatNumber(drawerTotals.purchases)}</strong>
+                  Purchases:{" "}
+                  <strong>{formatNumber(drawerTotals.purchases)}</strong>
                 </Typography>
                 <Typography variant="caption">
                   ROAS: <strong>{formatRoas(drawerTotals.roas)}</strong>
