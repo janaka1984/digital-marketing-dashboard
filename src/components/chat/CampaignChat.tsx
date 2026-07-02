@@ -17,12 +17,11 @@ import {
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useGetDashboardCampaignsQuery } from "@services/dashboardApi";
 import { useSendCampaignChatMessageMutation } from "@services/chatApi";
 import type { CampaignChatMessage } from "../../types/chat";
-import { buildCampaignInsight } from "./campaignChatInsights";
 
 type CampaignChatProps = {
   open: boolean;
@@ -51,6 +50,27 @@ const welcomeMessage: CampaignChatMessage = {
   createdAt: nowIso(),
 };
 
+const apiErrorMessage = (error: unknown) => {
+  const fallback = "Campaign AI Chat API request failed. Check the Network tab and backend logs, then try again.";
+  if (!error || typeof error !== "object") return fallback;
+
+  const maybeError = error as {
+    status?: number | string;
+    data?: unknown;
+    error?: string;
+  };
+
+  if (typeof maybeError.data === "string") return maybeError.data;
+  if (maybeError.data && typeof maybeError.data === "object") {
+    const data = maybeError.data as { detail?: unknown; error?: unknown; message?: unknown };
+    const detail = data.detail || data.error || data.message;
+    if (typeof detail === "string") return detail;
+  }
+
+  if (maybeError.error) return maybeError.error;
+  return maybeError.status ? `${fallback} Status: ${maybeError.status}.` : fallback;
+};
+
 export default function CampaignChat({ open, initialMessage = "", topOffset = 0, onClose }: CampaignChatProps) {
   const theme = useTheme();
   const location = useLocation();
@@ -61,20 +81,14 @@ export default function CampaignChat({ open, initialMessage = "", topOffset = 0,
   const [handledInitialMessage, setHandledInitialMessage] = useState("");
   const [sendCampaignChatMessage, { isLoading: isSendingToBackend }] = useSendCampaignChatMessageMutation();
   const threadRef = useRef<HTMLDivElement | null>(null);
-  const backendEnabled = import.meta.env.VITE_ENABLE_CAMPAIGN_CHAT_API === "true";
 
-  const { currentData, isFetching } = useGetDashboardCampaignsQuery(
+  const { isFetching } = useGetDashboardCampaignsQuery(
     {
       level: "campaign",
       range,
       status: "all",
     },
     { skip: !open }
-  );
-
-  const selectedRangeLabel = useMemo(
-    () => rangeOptions.find(([value]) => value === range)?.[1] || range,
-    [range]
   );
 
   useEffect(() => {
@@ -103,25 +117,25 @@ export default function CampaignChat({ open, initialMessage = "", topOffset = 0,
     appendMessage("user", trimmed);
     setDraft("");
 
-    if (backendEnabled) {
-      try {
-        const response = await sendCampaignChatMessage({
-          message: trimmed,
-          context: {
-            route: location.pathname,
-            range,
-            level: "campaign",
-            snapshot: currentData || null,
-          },
-        }).unwrap();
-        appendMessage("assistant", response.answer || "I could not find an answer for that campaign question.");
-        return;
-      } catch {
-        appendMessage("assistant", "The AI chat service is not available. I can still answer from the loaded campaign statistics.");
-      }
-    }
+    const searchParams = new URLSearchParams(location.search);
+    const clientId = searchParams.get("client_id") || searchParams.get("client") || undefined;
+    const platform = searchParams.get("platform") || undefined;
 
-    appendMessage("assistant", buildCampaignInsight(trimmed, currentData, selectedRangeLabel));
+    try {
+      const response = await sendCampaignChatMessage({
+        message: trimmed,
+        context: {
+          range,
+          level: "campaign",
+          ...(clientId ? { client_id: clientId } : {}),
+          ...(platform && platform !== "all" ? { platform } : {}),
+        },
+      }).unwrap();
+      appendMessage("assistant", response.answer || "Campaign AI Chat API returned an empty answer.");
+    } catch (error) {
+      console.error("Campaign AI Chat API request failed", error);
+      appendMessage("assistant", apiErrorMessage(error));
+    }
   };
 
   useEffect(() => {
@@ -137,6 +151,13 @@ export default function CampaignChat({ open, initialMessage = "", topOffset = 0,
   };
 
   const isBusy = isFetching || isSendingToBackend;
+
+  const handleDraftKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) return;
+    event.preventDefault();
+    if (!draft.trim() || isBusy) return;
+    submitMessage(draft);
+  };
 
   return (
     <Drawer
@@ -229,11 +250,13 @@ export default function CampaignChat({ open, initialMessage = "", topOffset = 0,
                     border: "1px solid",
                     borderColor: isUser ? "primary.main" : "divider",
                     bgcolor: isUser ? "primary.main" : "action.hover",
-                    color: isUser ? "primary.contrastText" : "text.primary",
+                    color: isUser ? "#fff" : "text.primary",
                     whiteSpace: "pre-line",
                   }}
                 >
-                  <Typography variant="body2">{message.content}</Typography>
+                  <Typography variant="body2" color="inherit">
+                    {message.content}
+                  </Typography>
                 </Paper>
               </Box>
             );
@@ -258,6 +281,7 @@ export default function CampaignChat({ open, initialMessage = "", topOffset = 0,
             <InputBase
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={handleDraftKeyDown}
               placeholder="Ask about campaign performance"
               multiline
               maxRows={4}

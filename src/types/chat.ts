@@ -10,10 +10,10 @@ export type CampaignChatMessage = {
 export type CampaignChatRequest = {
   message: string;
   context: {
-    route: string;
     range: string;
     level: "campaign";
-    snapshot: unknown;
+    client_id?: string;
+    platform?: string;
   };
 };
 
