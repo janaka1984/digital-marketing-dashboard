@@ -1,4 +1,5 @@
 import { createTheme, responsiveFontSizes } from '@mui/material/styles';
+import type { Theme } from '@mui/material/styles';
 
 let theme = createTheme({
   palette: {
@@ -88,5 +89,27 @@ let theme = createTheme({
 });
 
 theme = responsiveFontSizes(theme);
+
+export const dashboardTitleSx = (theme: Theme) => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  fontFamily: 'Roboto, sans-serif',
+  fontWeight: 700,
+  letterSpacing: 0.1,
+  color: 'text.primary',
+
+  '&::before': {
+    content: '""',
+    width: 4,
+    height: 28,
+    mr: 1.25,
+    borderRadius: 2,
+    background: `linear-gradient(
+      180deg,
+      ${theme.palette.primary.main} 0%,
+      ${theme.palette.secondary.main} 100%
+    )`
+  }
+});
 
 export default theme;

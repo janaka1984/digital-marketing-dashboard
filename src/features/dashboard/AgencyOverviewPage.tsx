@@ -1,45 +1,52 @@
-import { useState } from 'react';
-import { Box, Stack, Typography, FormControl, Select, MenuItem } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import {
+  Box,
+  FormControl,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+} from "@mui/material";
+import Grid from "@mui/material/Grid2";
+import { useState } from "react";
 
-import GroupIcon from '@mui/icons-material/Group';
-import EventIcon from '@mui/icons-material/Event';
-import PageviewIcon from '@mui/icons-material/Pageview';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import EventIcon from "@mui/icons-material/Event";
+import GroupIcon from "@mui/icons-material/Group";
+import PageviewIcon from "@mui/icons-material/Pageview";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 
-import { useGetAgencyOverviewQuery } from '@services/dashboardApi';
-import StatCard from '@components/StatCard';
+import StatCard from "@components/StatCard";
+import { useGetAgencyOverviewQuery } from "@services/dashboardApi";
 
-import AgencyClientTable from '@components/AgencyClientTable';
-import TrafficLineChart from '@components/charts/TrafficLineChart';
-import { AgencyOverviewResponse } from '@types';
+import AgencyClientTable from "@components/AgencyClientTable";
+import TrafficLineChart from "@components/charts/TrafficLineChart";
+import { dashboardTitleSx } from "@theme/index";
+import { AgencyOverviewResponse } from "@types";
 
 const panelSx = {
   p: 2.5,
-  bgcolor: 'background.paper',
+  bgcolor: "background.paper",
   borderRadius: 3,
-  border: '1px solid',
-  borderColor: 'divider'
+  border: "1px solid",
+  borderColor: "divider",
 };
 
 export default function AgencyOverviewPage() {
-  const [range, setRange] = useState('last7');
+  const [range, setRange] = useState("last7");
   const { data, isFetching } = useGetAgencyOverviewQuery({ range });
 
-  const summary: AgencyOverviewResponse['summary'] =
-    data?.summary ?? {
-      total_clients: 0,
-      active_clients: 0,
-      pageviews: 0,
-      clicks: 0,
-      initiated: 0,
-      inactive_clients: 0,
-      total_events: 0
-    };
+  const summary: AgencyOverviewResponse["summary"] = data?.summary ?? {
+    total_clients: 0,
+    active_clients: 0,
+    pageviews: 0,
+    clicks: 0,
+    initiated: 0,
+    inactive_clients: 0,
+    total_events: 0,
+  };
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h4" fontWeight={700}>
+      <Typography variant="h4" sx={dashboardTitleSx}>
         Agency Overview
       </Typography>
 
@@ -54,26 +61,58 @@ export default function AgencyOverviewPage() {
         </Select>
       </FormControl>
 
-      {isFetching ? <Typography color="text.secondary">Loading...</Typography> : null}
+      {isFetching ? (
+        <Typography color="text.secondary">Loading...</Typography>
+      ) : null}
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Total Clients" icon={GroupIcon} color="#1E88E5" value={summary.total_clients ?? 0} />
+          <StatCard
+            title="Total Clients"
+            icon={GroupIcon}
+            color="#1E88E5"
+            value={summary.total_clients ?? 0}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Active Clients" icon={EventIcon} color="#00C853" value={summary.active_clients ?? 0} />
+          <StatCard
+            title="Active Clients"
+            icon={EventIcon}
+            color="#00C853"
+            value={summary.active_clients ?? 0}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Inactive Clients" icon={EventIcon} color="#F44336" value={summary.inactive_clients ?? 0} />
+          <StatCard
+            title="Inactive Clients"
+            icon={EventIcon}
+            color="#F44336"
+            value={summary.inactive_clients ?? 0}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Total Events" icon={EventIcon} color="#5E35B1" value={summary.total_events ?? 0} />
+          <StatCard
+            title="Total Events"
+            icon={EventIcon}
+            color="#5E35B1"
+            value={summary.total_events ?? 0}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="PageViews" icon={PageviewIcon} color="#1E88E5" value={summary.pageviews ?? 0} />
+          <StatCard
+            title="PageViews"
+            icon={PageviewIcon}
+            color="#1E88E5"
+            value={summary.pageviews ?? 0}
+          />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Clicks" icon={ShoppingCartIcon} color="#FF6F00" value={summary.clicks ?? 0} />
+          <StatCard
+            title="Clicks"
+            icon={ShoppingCartIcon}
+            color="#FF6F00"
+            value={summary.clicks ?? 0}
+          />
         </Grid>
       </Grid>
 
