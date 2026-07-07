@@ -1,35 +1,35 @@
-import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
+  MenuItem,
   Paper,
   Stack,
   TextField,
   Typography,
-  MenuItem
-} from '@mui/material';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
-import { API_BASE_URL } from '@utils/env';
+} from "@mui/material";
+import { API_BASE_URL } from "@utils/env";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 export default function SignUpPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const token = params.get('token');
+  const token = params.get("token");
 
   const [form, setForm] = useState({
-    username: '',
-    email: '',
-    password: '',
-    role: 'client',
-    business_name: '',
-    agency_name: '',
-    company_website: '',
-    token: token || ''
+    username: "",
+    email: "",
+    password: "",
+    role: "client",
+    business_name: "",
+    agency_name: "",
+    company_website: "",
+    token: token || "",
   });
 
   const [inviteInfo, setInviteInfo] = useState<any>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (token) {
@@ -39,12 +39,12 @@ export default function SignUpPage() {
           setInviteInfo(res.data);
           setForm((f) => ({
             ...f,
-            email: res.data.email || '',
-            business_name: res.data.business_name || '',
-            role: 'client'
+            email: res.data.email || "",
+            business_name: res.data.business_name || "",
+            role: "client",
           }));
         })
-        .catch(() => setError('Invalid or expired invite link.'));
+        .catch(() => setError("Invalid or expired invite link."));
     }
   }, [token]);
 
@@ -54,44 +54,51 @@ export default function SignUpPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     try {
       const payload = { ...form, username: form.email };
       await axios.post(`${API_BASE_URL}/accounts/auth/register/`, payload);
-      navigate('/login');
+      navigate("/login");
     } catch (err: any) {
-      console.error('Signup failed', err);
+      console.error("Signup failed", err);
 
       if (err.response?.data) {
         const data = err.response.data;
-        if (typeof data === 'string') setError(data);
-        else if (typeof data === 'object') {
+        if (typeof data === "string") setError(data);
+        else if (typeof data === "object") {
           const message = Object.entries(data)
-            .map(([f, msgs]) => `${f}: ${(msgs as string[]).join(', ')}`)
-            .join('\n');
+            .map(([f, msgs]) => `${f}: ${(msgs as string[]).join(", ")}`)
+            .join("\n");
           setError(message);
-        } else setError('Registration failed. Please check your details.');
-      } else setError('Network error. Please try again later.');
+        } else setError("Registration failed. Please check your details.");
+      } else setError("Network error. Please try again later.");
     }
   };
 
   return (
     <Box
       sx={{
-        minHeight: '100dvh',
-        display: 'grid',
-        placeItems: 'center',
+        minHeight: "100dvh",
+        display: "grid",
+        placeItems: "center",
         p: 2,
-        background: 'linear-gradient(145deg, #eef2f6 0%, #e2e9f4 100%)'
+        backgroundImage:
+          'linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), url("/quantum_mesh_background.png")',
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }}
     >
-      <Paper sx={{ width: '100%', maxWidth: 460, p: { xs: 3, sm: 4 } }}>
+      <Paper sx={{ width: "100%", maxWidth: 460, p: { xs: 3, sm: 4 } }}>
         <form onSubmit={onSubmit}>
           <Stack spacing={2}>
             <Stack spacing={0.5}>
-              <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '1.8rem' } }}>
-                {token ? 'Accept Invite & Create Account' : 'Create Account'}
+              <Typography
+                variant="h4"
+                sx={{ fontSize: { xs: "1.5rem", sm: "1.8rem" } }}
+              >
+                {token ? "Accept Invite & Create Account" : "Create Account"}
               </Typography>
               {inviteInfo ? (
                 <Typography variant="body2" color="text.secondary">
@@ -145,7 +152,7 @@ export default function SignUpPage() {
               required
             />
 
-            {!token && form.role === 'agency' ? (
+            {!token && form.role === "agency" ? (
               <>
                 <TextField
                   label="Agency Name"
@@ -165,19 +172,19 @@ export default function SignUpPage() {
             ) : null}
 
             {error ? (
-              <Typography color="error" sx={{ whiteSpace: 'pre-line' }}>
+              <Typography color="error" sx={{ whiteSpace: "pre-line" }}>
                 {error}
               </Typography>
             ) : null}
 
             <Button type="submit" variant="contained" fullWidth size="large">
-              {token ? 'Join Agency' : 'Sign Up'}
+              {token ? "Join Agency" : "Sign Up"}
             </Button>
 
             {!token ? (
               <Typography align="center" variant="body2" color="text.secondary">
-                Already have an account?{' '}
-                <Link to="/login" style={{ textDecoration: 'none' }}>
+                Already have an account?{" "}
+                <Link to="/login" style={{ textDecoration: "none" }}>
                   Log in
                 </Link>
               </Typography>

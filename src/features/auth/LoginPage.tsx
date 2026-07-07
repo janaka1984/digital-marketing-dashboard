@@ -1,32 +1,42 @@
-import { Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
-import { useState } from 'react';
-import { useAppDispatch } from '@store/hooks';
-import { signIn } from './authSlice';
-import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import { API_BASE_URL } from '@utils/env';
+import {
+  Box,
+  Button,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { useAppDispatch } from "@store/hooks";
+import { API_BASE_URL } from "@utils/env";
+import axios from "axios";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { signIn } from "./authSlice";
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
-  const [pwd, setPwd] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [pwd, setPwd] = useState("");
+  const [error, setError] = useState("");
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     try {
-      const tokenRes = await axios.post(`${API_BASE_URL}/accounts/auth/token/`, {
-        username: email,
-        password: pwd
-      });
+      const tokenRes = await axios.post(
+        `${API_BASE_URL}/accounts/auth/token/`,
+        {
+          username: email,
+          password: pwd,
+        },
+      );
       const { access, refresh } = tokenRes.data;
 
       const meRes = await axios.get(`${API_BASE_URL}/accounts/auth/me/`, {
-        headers: { Authorization: `Bearer ${access}` }
+        headers: { Authorization: `Bearer ${access}` },
       });
 
       const user = meRes.data;
@@ -37,35 +47,42 @@ export default function LoginPage() {
           email: user.email,
           role: user.role,
           accessToken: access,
-          refreshToken: refresh
-        })
+          refreshToken: refresh,
+        }),
       );
 
-      if (user?.role === 'agency') {
-        navigate('/agency/overview');
+      if (user?.role === "agency") {
+        navigate("/agency/overview");
       } else {
-        navigate('/client/overview');
+        navigate("/client/overview");
       }
     } catch (err: any) {
-      console.error('Login failed', err);
-      setError('Invalid email or password. Please try again.');
+      console.error("Login failed", err);
+      setError("Invalid email or password. Please try again.");
     }
   };
 
   return (
     <Box
       sx={{
-        minHeight: '100dvh',
-        display: 'grid',
-        placeItems: 'center',
+        minHeight: "100dvh",
+        display: "grid",
+        placeItems: "center",
         p: 2,
-        background: 'linear-gradient(145deg, #eef2f6 0%, #e2e9f4 100%)'
+        backgroundImage:
+          'linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), url("/quantum_mesh_background.png")',
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }}
     >
-      <Paper sx={{ width: '100%', maxWidth: 420, p: { xs: 3, sm: 4 } }}>
+      <Paper sx={{ width: "100%", maxWidth: 420, p: { xs: 3, sm: 4 } }}>
         <Stack spacing={2.5}>
           <Stack spacing={0.5}>
-            <Typography variant="h4" sx={{ fontSize: { xs: '1.6rem', sm: '1.9rem' } }}>
+            <Typography
+              variant="h4"
+              sx={{ fontSize: { xs: "1.6rem", sm: "1.9rem" } }}
+            >
               Sign In
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -100,8 +117,8 @@ export default function LoginPage() {
           </form>
 
           <Typography align="center" variant="body2" color="text.secondary">
-            Don&apos;t have an account?{' '}
-            <Link to="/signup" style={{ textDecoration: 'none' }}>
+            Don&apos;t have an account?{" "}
+            <Link to="/signup" style={{ textDecoration: "none" }}>
               Sign Up
             </Link>
           </Typography>
