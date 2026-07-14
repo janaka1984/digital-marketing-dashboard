@@ -1,6 +1,7 @@
 // src/AppRoutes.tsx
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import DashboardLayout from "@layouts/DashboardLayout";
+import LoadingOverlay from "@components/LoadingOverlay";
 import LoginPage from "@features/auth/LoginPage";
 import SignUpPage from "@features/auth/SignUpPage";
 import DashboardPage from "@features/dashboard/DashboardPage";
@@ -9,11 +10,50 @@ import TrafficFunnelPage from "@features/dashboard/TrafficFunnelPage";
 import SourcesPage from "@features/dashboard/SourcesPage";
 import EventsPage from "@features/events/EventsPage";
 import IntegrationsPage from "@features/integrations/IntegrationsPage";
+import BillingOverviewPage from "@features/billing/BillingOverviewPage";
+import PlanSelectionPage from "@features/billing/PlanSelectionPage";
+import BillingSuccessPage from "@features/billing/BillingSuccessPage";
+import BillingCancelPage from "@features/billing/BillingCancelPage";
 // import SettingsPage from "@features/settings/SettingsPage";
 import InviteClientForm from "@features/agency/InviteClientForm";
 import AgencyOverviewPage from "@features/dashboard/AgencyOverviewPage";
 import AgencyAnalyticsPage from "@features/dashboard/AgencyAnalyticsPage";
 import { useAppSelector } from "@store/hooks";
+import { useGetSubscriptionQuery } from "@services/billingApi";
+import { hasActiveAccess } from "@features/billing/billingUtils";
+
+function isAllowedWhenRestricted(pathname: string) {
+  return (
+    pathname === "/" ||
+    pathname === "/agency/overview" ||
+    pathname === "/client/overview" ||
+    pathname.startsWith("/billing")
+  );
+}
+
+function SubscriptionGate() {
+  const { pathname } = useLocation();
+  const {
+    data: subscription,
+    isLoading,
+    isFetching,
+    isUninitialized,
+  } = useGetSubscriptionQuery();
+
+  if (isLoading || isUninitialized || (isFetching && !subscription)) {
+    return <LoadingOverlay open />;
+  }
+
+  if (!hasActiveAccess(subscription) && !isAllowedWhenRestricted(pathname)) {
+    sessionStorage.setItem(
+      "billingNotice",
+      "Your trial or subscription is not active. Choose a plan to continue.",
+    );
+    return <Navigate to="/billing" replace />;
+  }
+
+  return <DashboardLayout />;
+}
 
 export function AppRoutes() {
   const isAuthed = useAppSelector((s) => s.auth.isAuthenticated);
@@ -27,10 +67,11 @@ export function AppRoutes() {
       {/* Protected (authenticated) routes */}
       <Route
         path="/"
-        element={isAuthed ? <DashboardLayout /> : <Navigate to="/login" replace />}
+        element={isAuthed ? <SubscriptionGate /> : <Navigate to="/login" replace />}
       >
         {/* Main dashboard overview */}
         <Route index element={<DashboardPage />} />
+        <Route path="client/overview" element={<DashboardPage />} />
 
         {/* Separate feature pages */}
         <Route path="campaigns" element={<CampaignsPage />} />
@@ -38,6 +79,10 @@ export function AppRoutes() {
         <Route path="sources" element={<SourcesPage />} />
         <Route path="events" element={<EventsPage />} />
         <Route path="integrations" element={<IntegrationsPage />} />
+        <Route path="billing" element={<BillingOverviewPage />} />
+        <Route path="billing/plans" element={<PlanSelectionPage />} />
+        <Route path="billing/success" element={<BillingSuccessPage />} />
+        <Route path="billing/cancel" element={<BillingCancelPage />} />
         {/* <Route path="settings" element={<SettingsPage />} /> */}
 
         {/* Agency-only route */}

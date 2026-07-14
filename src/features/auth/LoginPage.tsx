@@ -12,6 +12,7 @@ import axios from "axios";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signIn } from "./authSlice";
+import { apiBase } from "@services/apiBase";
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();
@@ -41,6 +42,7 @@ export default function LoginPage() {
 
       const user = meRes.data;
 
+      dispatch(apiBase.util.resetApiState());
       dispatch(
         signIn({
           name: user.username || email,

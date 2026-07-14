@@ -17,11 +17,15 @@ import EventIcon from '@mui/icons-material/Event';
 import SettingsIcon from '@mui/icons-material/Settings';
 import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstructions';
 import GroupIcon from '@mui/icons-material/Group';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { signOut } from '@features/auth/authSlice';
 import { useTheme } from '@mui/material/styles';
+import { useGetSubscriptionQuery } from '@services/billingApi';
+import { apiBase } from '@services/apiBase';
+import { hasActiveAccess } from '@features/billing/billingUtils';
 
 type SidebarProps = {
   collapsed?: boolean;
@@ -35,6 +39,8 @@ export default function Sidebar({ collapsed = false, onNavigate }: SidebarProps)
   const user = useAppSelector((s) => s.auth.user);
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const { data: subscription } = useGetSubscriptionQuery();
+  const hasSubscriptionAccess = hasActiveAccess(subscription);
 
   const role = user?.role || 'client';
 
@@ -44,17 +50,24 @@ export default function Sidebar({ collapsed = false, onNavigate }: SidebarProps)
     { text: 'Traffic & Funnel', icon: <ShowChartIcon />, path: '/traffic-funnel' },
     { text: 'Sources', icon: <TravelExploreIcon />, path: '/sources' },
     { text: 'Events', icon: <EventIcon />, path: '/events' },
-    { text: 'Integrations', icon: <IntegrationInstructionsIcon />, path: '/integrations' }
+    { text: 'Integrations', icon: <IntegrationInstructionsIcon />, path: '/integrations' },
+    { text: 'Billing', icon: <AccountBalanceWalletIcon />, path: '/billing' }
   ];
 
   const agencyMenu = [
     { text: 'Overview', icon: <DashboardIcon />, path: '/agency/overview' },
     { text: 'Analytics', icon: <ShowChartIcon />, path: '/agency/analytics' },
     { text: 'Clients', icon: <GroupIcon />, path: '/agency/clients' },
+    { text: 'Billing', icon: <AccountBalanceWalletIcon />, path: '/billing' },
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' }
   ];
 
-  const menuItems = role === 'agency' ? agencyMenu : clientMenu;
+  const menuItems = (role === 'agency' ? agencyMenu : clientMenu).filter(
+    (item) =>
+      hasSubscriptionAccess ||
+      item.path === '/billing' ||
+      item.path.endsWith('/overview'),
+  );
 
   const routeTo = (path: string) => {
     navigate(path);
@@ -63,6 +76,7 @@ export default function Sidebar({ collapsed = false, onNavigate }: SidebarProps)
 
   const handleLogout = () => {
     dispatch(signOut());
+    dispatch(apiBase.util.resetApiState());
     navigate('/login');
     onNavigate?.();
   };
@@ -74,7 +88,7 @@ export default function Sidebar({ collapsed = false, onNavigate }: SidebarProps)
 
         <List sx={{ p: 0 }}>
           {menuItems.map((item) => {
-            const active = pathname === item.path;
+            const active = pathname === item.path || pathname.startsWith(`${item.path}/`);
             const content = (
               <ListItemButton
                 key={item.text}

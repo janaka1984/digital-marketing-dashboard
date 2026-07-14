@@ -3,8 +3,11 @@ import {
   Box,
   InputBase,
   Paper,
+  Alert,
+  Button,
   Drawer,
   IconButton,
+  Snackbar,
   Stack,
   Typography,
   Toolbar,
@@ -16,12 +19,18 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
-import { Outlet } from "react-router-dom";
-import { useState } from "react";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import { useColorMode } from "@theme/useColorMode";
 import { useTheme } from "@mui/material/styles";
 import CampaignChat from "@components/chat/CampaignChat";
+import { useGetSubscriptionQuery } from "@services/billingApi";
+import {
+  isRestrictedSubscription,
+  subscriptionPackageLabel,
+} from "@features/billing/billingUtils";
 
 const DRAWER_WIDTH = 280;
 const MINI_DRAWER_WIDTH = 88;
@@ -33,16 +42,36 @@ export default function DashboardLayout() {
   const [chatOpen, setChatOpen] = useState(false);
   const [searchDraft, setSearchDraft] = useState("");
   const [chatSeedMessage, setChatSeedMessage] = useState("");
+  const [billingNotice, setBillingNotice] = useState("");
+  const navigate = useNavigate();
   const { toggleColorMode } = useColorMode();
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+  const { data: subscription } = useGetSubscriptionQuery();
+  const showSubscriptionWarning = isRestrictedSubscription(subscription);
+  const packageName = subscriptionPackageLabel(subscription);
+  const subscriptionWarning =
+    subscription?.status === "expired"
+      ? "Your free trial has expired. Select a plan and complete payment to continue."
+      : "Your trial or subscription is not active. Choose a plan to continue.";
 
   const currentDrawerWidth = isDesktop
     ? collapsed
       ? MINI_DRAWER_WIDTH
       : DRAWER_WIDTH
     : DRAWER_WIDTH;
+
+  useEffect(() => {
+    const handleBillingNotice = (event: Event) => {
+      setBillingNotice((event as CustomEvent<string>).detail || "");
+    };
+
+    window.addEventListener("billingNotice", handleBillingNotice);
+    return () => {
+      window.removeEventListener("billingNotice", handleBillingNotice);
+    };
+  }, []);
 
   return (
     <Box
@@ -74,9 +103,9 @@ export default function DashboardLayout() {
           }}
         >
           <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1.2}
+            alignItems="flex-start"
+            justifyContent="center"
+            spacing={0.35}
             sx={{ minWidth: { md: currentDrawerWidth - 24 } }}
           >
             <Typography
@@ -102,6 +131,19 @@ export default function DashboardLayout() {
                 AI
               </Box>
             </Typography>
+            {packageName ? (
+              <Typography
+                sx={{
+                  display: { xs: "none", sm: "block" },
+                  color: "text.secondary",
+                  fontSize: "0.72rem",
+                  fontWeight: 500,
+                  lineHeight: 1,
+                }}
+              >
+                {packageName}
+              </Typography>
+            ) : null}
           </Stack>
 
           <IconButton
@@ -215,6 +257,40 @@ export default function DashboardLayout() {
         onClose={() => setChatOpen(false)}
       />
 
+      <Snackbar
+        open={Boolean(billingNotice)}
+        autoHideDuration={4500}
+        onClose={() => setBillingNotice("")}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          severity="info"
+          variant="outlined"
+          onClose={() => setBillingNotice("")}
+          sx={{
+            width: "100%",
+            maxWidth: 420,
+            borderRadius: 2,
+            borderColor: "primary.light",
+            bgcolor: "background.paper",
+            color: "text.primary",
+            boxShadow: (muiTheme) =>
+              muiTheme.palette.mode === "dark"
+                ? "0 14px 36px rgba(0,0,0,0.42)"
+                : "0 14px 36px rgba(17,25,54,0.16)",
+            "& .MuiAlert-icon": {
+              color: "primary.main",
+            },
+            "& .MuiAlert-message": {
+              fontWeight: 600,
+              lineHeight: 1.45,
+            },
+          }}
+        >
+          {billingNotice}
+        </Alert>
+      </Snackbar>
+
       <Drawer
         variant={isDesktop ? "permanent" : "temporary"}
         anchor="left"
@@ -256,6 +332,41 @@ export default function DashboardLayout() {
           transition: "all 0.2s ease",
         }}
       >
+        {showSubscriptionWarning ? (
+          <Alert
+            icon={<WarningAmberIcon fontSize="inherit" />}
+            severity="warning"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => navigate("/billing/plans")}
+                sx={{ fontWeight: 700, whiteSpace: "nowrap" }}
+              >
+                Choose a plan
+              </Button>
+            }
+            sx={{
+              mb: 3,
+              px: { xs: 1.5, md: 2.5 },
+              py: 1.25,
+              alignItems: "center",
+              border: 0,
+              borderRadius: 3,
+              bgcolor: isDark ? "rgba(245, 158, 11, 0.12)" : "#FFF8EC",
+              color: isDark ? "#FCD68A" : "#704000",
+              "& .MuiAlert-icon": {
+                color: isDark ? "#FBBF24" : "#F5A623",
+              },
+              "& .MuiAlert-message": {
+                py: 0.5,
+                fontSize: { xs: "0.9rem", md: "1rem" },
+              },
+            }}
+          >
+            {subscriptionWarning}
+          </Alert>
+        ) : null}
         <Outlet />
       </Box>
     </Box>

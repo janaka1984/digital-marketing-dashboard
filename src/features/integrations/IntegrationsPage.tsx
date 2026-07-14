@@ -5,6 +5,7 @@ import FacebookIcon from "@mui/icons-material/Facebook";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import {
   Alert,
+  AlertTitle,
   Box,
   Button,
   Card,
@@ -37,7 +38,7 @@ import {
 import { useAppSelector } from "@store/hooks";
 import { dashboardTitleSx } from "@theme/index";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 
 type IntegrationFormState = {
   client_id: string;
@@ -103,6 +104,25 @@ function toNumber(value: string | null): number | undefined {
 
 function parseBoolean(value: string | null): boolean {
   return value === "true" || value === "1" || value === "True";
+}
+
+function isSubscriptionLimitError(error: any): boolean {
+  const status = error?.status || error?.originalStatus;
+  if (![400, 402, 403].includes(Number(status))) return false;
+
+  const payload = error?.data;
+  const text =
+    typeof payload === "string"
+      ? payload
+      : JSON.stringify(payload || {}).toLowerCase();
+
+  return (
+    Number(status) === 402 ||
+    text.includes("subscription") ||
+    text.includes("limit") ||
+    text.includes("entitlement") ||
+    text.includes("billing")
+  );
 }
 
 function parseAccountPayload(value: string | null): FacebookAdAccountOption[] {
@@ -282,6 +302,7 @@ export default function IntegrationsPage() {
   );
   const [form, setForm] = useState<IntegrationFormState>(EMPTY_FORM);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [subscriptionLimitMessage, setSubscriptionLimitMessage] = useState("");
   const [adAccountOptions, setAdAccountOptions] = useState<
     FacebookAdAccountOption[]
   >([]);
@@ -480,6 +501,7 @@ export default function IntegrationsPage() {
     });
     setIsFormOpen(true);
     setFeedback(null);
+    setSubscriptionLimitMessage("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [isAgency, selectedClientId]);
 
@@ -503,6 +525,7 @@ export default function IntegrationsPage() {
       client_id: isAgency ? selectedClientId : "",
     });
     setFeedback(null);
+    setSubscriptionLimitMessage("");
   }, [isAgency, selectedClientId]);
 
   const ensureDataSource = async (): Promise<IntegrationDataSource> => {
@@ -591,9 +614,17 @@ export default function IntegrationsPage() {
         type: "success",
         message: "Integration saved successfully.",
       });
+      setSubscriptionLimitMessage("");
       await refetchDataSources();
     } catch (error: any) {
       console.error("Failed to save integration:", error);
+      if (isSubscriptionLimitError(error)) {
+        setSubscriptionLimitMessage(
+          error?.data?.message ||
+            error?.data?.detail ||
+            "Your current subscription does not allow another integration.",
+        );
+      }
       const msg =
         error?.data?.message ||
         "Failed to save integration. Please verify your inputs and try again.";
@@ -624,6 +655,13 @@ export default function IntegrationsPage() {
       window.location.assign(response.oauth_url);
     } catch (error: any) {
       console.error("Facebook OAuth initiation failed:", error);
+      if (isSubscriptionLimitError(error)) {
+        setSubscriptionLimitMessage(
+          error?.data?.message ||
+            error?.data?.detail ||
+            "Your current subscription does not allow another integration.",
+        );
+      }
       setFeedback({
         type: "error",
         message:
@@ -760,6 +798,25 @@ export default function IntegrationsPage() {
       {showForm && (
         <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
           <Stack spacing={3}>
+            {subscriptionLimitMessage && (
+              <Alert
+                severity="warning"
+                action={
+                  <Button
+                    component={RouterLink}
+                    to="/billing/plans"
+                    color="inherit"
+                    size="small"
+                  >
+                    Upgrade
+                  </Button>
+                }
+              >
+                <AlertTitle>Subscription limit reached</AlertTitle>
+                {subscriptionLimitMessage}
+              </Alert>
+            )}
+
             <Stack
               direction={{ xs: "column", md: "row" }}
               justifyContent="space-between"

@@ -2,6 +2,31 @@ import { fetchBaseQuery, createApi } from "@reduxjs/toolkit/query/react";
 import { API_BASE_URL } from "@utils/env";
 import { signOut, signIn } from "@features/auth/authSlice";
 
+const SUBSCRIPTION_REQUIRED_MESSAGE =
+  "Your trial or subscription is not active. Choose a plan to continue.";
+
+function isOverviewOrBillingPath(pathname: string) {
+  return (
+    pathname === "/" ||
+    pathname === "/agency/overview" ||
+    pathname === "/client/overview" ||
+    pathname.startsWith("/billing")
+  );
+}
+
+function handleSubscriptionRequiredRedirect() {
+  if (typeof window === "undefined") return;
+  const { pathname } = window.location;
+  sessionStorage.setItem("billingNotice", SUBSCRIPTION_REQUIRED_MESSAGE);
+  window.dispatchEvent(
+    new CustomEvent("billingNotice", {
+      detail: SUBSCRIPTION_REQUIRED_MESSAGE,
+    }),
+  );
+  if (isOverviewOrBillingPath(pathname)) return;
+  window.location.assign("/billing");
+}
+
 const baseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,
   prepareHeaders: (headers, { getState }) => {
@@ -48,12 +73,31 @@ const baseQueryWithReauth: typeof baseQuery = async (args, api, extraOptions) =>
     }
   }
 
+  if (result.error && result.error.status === 402) {
+    const data = result.error.data as { code?: string } | undefined;
+    if (data?.code === "subscription_required") {
+      api.dispatch(
+        apiBase.util.invalidateTags([{ type: "Subscription", id: "CURRENT" }]),
+      );
+      handleSubscriptionRequiredRedirect();
+    }
+  }
+
   return result;
 };
 
 export const apiBase = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Event", "Stats", "Campaign", "Clients", "Integration"],
+  tagTypes: [
+    "Event",
+    "Stats",
+    "Campaign",
+    "Clients",
+    "Integration",
+    "BillingPlan",
+    "Subscription",
+    "Payment",
+  ],
   endpoints: () => ({}),
 });
