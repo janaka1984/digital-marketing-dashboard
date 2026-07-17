@@ -12,13 +12,10 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   MenuItem,
   Paper,
+  Radio,
   Stack,
   TextField,
   Typography,
@@ -37,7 +34,7 @@ import {
 } from "@services/integrationApi";
 import { useAppSelector } from "@store/hooks";
 import { dashboardTitleSx } from "@theme/index";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 
 type IntegrationFormState = {
@@ -58,13 +55,39 @@ type FeedbackState = {
 } | null;
 
 type CallbackPayload = {
+  ok?: boolean;
   credentialId?: number;
   dataSourceId?: number;
   selectionToken?: string;
   selectionRequired: boolean;
   adAccounts: FacebookAdAccountOption[];
+  marketingAdAccountId?: string;
+  businessId?: string;
   message?: string;
+  error?: string;
 };
+
+const FACEBOOK_OAUTH_QUERY_KEYS = [
+  "ok",
+  "error",
+  "message",
+  "credential_id",
+  "data_source_id",
+  "selection_required",
+  "selection_token",
+  "available_ad_accounts",
+  "marketing_ad_account_id",
+  "business_id",
+  // Backward-compatible aliases returned by older backend versions.
+  "facebook_oauth",
+  "credentials_id",
+  "integration_credential_id",
+  "datasource_id",
+  "integration_id",
+  "ad_accounts",
+  "accounts",
+  "status",
+] as const;
 
 const EMPTY_FORM: IntegrationFormState = {
   client_id: "",
@@ -103,7 +126,49 @@ function toNumber(value: string | null): number | undefined {
 }
 
 function parseBoolean(value: string | null): boolean {
-  return value === "true" || value === "1" || value === "True";
+  return value === "1" || value?.toLowerCase() === "true";
+}
+
+function decodeCallbackValue(value: string | null): string | undefined {
+  if (!value) return undefined;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    // URLSearchParams has already decoded the value. A literal percent sign is
+    // valid here and should not prevent the rest of the callback being handled.
+    return value;
+  }
+}
+
+function getApiErrorMessage(error: any, fallback: string): string {
+  const status = Number(error?.status || error?.originalStatus);
+  const payload = error?.data;
+  const serverMessage =
+    typeof payload === "string"
+      ? payload
+      : normalizeValue(payload?.message) ||
+        normalizeValue(payload?.detail) ||
+        normalizeValue(payload?.error) ||
+        normalizeValue(error?.message);
+  const code = normalizeValue(payload?.code).toLowerCase();
+
+  if (serverMessage) return serverMessage;
+  if (status === 401) {
+    return "Your session has expired. Please sign in again and retry.";
+  }
+  if (status === 402 || code === "subscription_required") {
+    return "An active subscription is required to connect this integration.";
+  }
+  if (code.includes("cancel")) {
+    return "Facebook authorization was cancelled. No credentials were saved.";
+  }
+  if (code.includes("selection") && code.includes("expir")) {
+    return "The ad-account selection has expired. Start the Facebook connection again.";
+  }
+  if (code.includes("state") && code.includes("expir")) {
+    return "The Facebook authorization session has expired. Please try connecting again.";
+  }
+  return fallback;
 }
 
 function isSubscriptionLimitError(error: any): boolean {
@@ -125,11 +190,17 @@ function isSubscriptionLimitError(error: any): boolean {
   );
 }
 
-function parseAccountPayload(value: string | null): FacebookAdAccountOption[] {
+export function parseAccountPayload(
+  value: string | null,
+): FacebookAdAccountOption[] {
   if (!value) return [];
   try {
-    const decoded = decodeURIComponent(value);
-    const parsed = JSON.parse(decoded);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      parsed = JSON.parse(decodeCallbackValue(value) || "");
+    }
     if (!Array.isArray(parsed)) return [];
 
     return parsed
@@ -145,6 +216,10 @@ function parseAccountPayload(value: string | null): FacebookAdAccountOption[] {
         if (!item || typeof item !== "object") return null;
 
         const record = item as Record<string, unknown>;
+        const stringArray = (arrayValue: unknown): string[] =>
+          Array.isArray(arrayValue)
+            ? arrayValue.map(normalizeValue).filter(Boolean)
+            : [];
         const id =
           normalizeValue(record.id) ||
           normalizeValue(record.account_id) ||
@@ -165,6 +240,9 @@ function parseAccountPayload(value: string | null): FacebookAdAccountOption[] {
             id,
           normalized_account_id:
             normalizeValue(record.normalized_account_id) || id,
+          sources: stringArray(record.sources),
+          business_ids: stringArray(record.business_ids),
+          business_names: stringArray(record.business_names),
         };
       })
       .filter(Boolean) as FacebookAdAccountOption[];
@@ -228,14 +306,16 @@ function buildFormState(
   };
 }
 
-function readCallbackPayload(
+export function readCallbackPayload(
   searchParams: URLSearchParams,
 ): CallbackPayload | null {
   const hasOAuthSignal =
+    searchParams.has("ok") ||
     searchParams.has("selection_required") ||
     searchParams.has("credential_id") ||
     searchParams.has("data_source_id") ||
-    searchParams.has("facebook_oauth");
+    searchParams.has("facebook_oauth") ||
+    searchParams.has("error");
 
   if (!hasOAuthSignal) return null;
 
@@ -246,6 +326,9 @@ function readCallbackPayload(
   const fallbackAccounts = parseAccountPayload(searchParams.get("accounts"));
 
   return {
+    ok: searchParams.has("ok")
+      ? parseBoolean(searchParams.get("ok"))
+      : undefined,
     credentialId:
       toNumber(searchParams.get("credential_id")) ??
       toNumber(searchParams.get("credentials_id")) ??
@@ -261,8 +344,13 @@ function readCallbackPayload(
       : availableAccounts.length
         ? availableAccounts
         : fallbackAccounts,
-    message:
-      searchParams.get("message") || searchParams.get("status") || undefined,
+    marketingAdAccountId:
+      decodeCallbackValue(searchParams.get("marketing_ad_account_id")),
+    businessId: decodeCallbackValue(searchParams.get("business_id")),
+    message: decodeCallbackValue(
+      searchParams.get("message") || searchParams.get("status"),
+    ),
+    error: decodeCallbackValue(searchParams.get("error")),
   };
 }
 
@@ -289,6 +377,7 @@ export default function IntegrationsPage() {
     useInitiateFacebookOAuthMutation();
   const [selectFacebookAdAccount, { isLoading: isSelectingAdAccount }] =
     useSelectFacebookAdAccountMutation();
+  const facebookInitiationLock = useRef(false);
 
   const [selectedClientId, setSelectedClientId] = useState(
     searchParams.get("client") || "",
@@ -375,69 +464,6 @@ export default function IntegrationsPage() {
       ignore = true;
     };
   }, [triggerGetCredentials, visibleDataSources]);
-
-  useEffect(() => {
-    const callback = readCallbackPayload(searchParams);
-    if (!callback) return;
-
-    const nextSearch = new URLSearchParams(searchParams);
-    [
-      "facebook_oauth",
-      "selection_required",
-      "credential_id",
-      "credentials_id",
-      "integration_credential_id",
-      "data_source_id",
-      "datasource_id",
-      "integration_id",
-      "selection_token",
-      "ad_accounts",
-      "available_ad_accounts",
-      "accounts",
-      "message",
-      "status",
-    ].forEach((key) => nextSearch.delete(key));
-
-    setSearchParams(nextSearch, { replace: true });
-
-    if (callback.selectionRequired) {
-      setPendingCredentialId(callback.credentialId ?? null);
-      setPendingDataSourceId(callback.dataSourceId ?? null);
-      setPendingSelectionToken(callback.selectionToken || "");
-      setAdAccountOptions(callback.adAccounts);
-      setSelectedAdAccountId(
-        callback.adAccounts[0]?.normalized_account_id ||
-          callback.adAccounts[0]?.account_id ||
-          callback.adAccounts[0]?.id ||
-          "",
-      );
-      setFeedback({
-        type: "info",
-        message:
-          callback.message ||
-          "Multiple ad accounts detected. Please select one to complete the Meta integration.",
-      });
-      return;
-    }
-
-    setFeedback({
-      type: "success",
-      message:
-        callback.message ||
-        "Facebook OAuth completed successfully. Credentials refreshed.",
-    });
-
-    if (callback.dataSourceId) {
-      refreshCredentials(callback.dataSourceId);
-    }
-
-    refetchDataSources();
-  }, [
-    searchParams,
-    setSearchParams,
-    triggerGetCredentials,
-    refetchDataSources,
-  ]);
 
   const activeDataSource = editingDataSourceId
     ? (visibleDataSources.find((item) => item.id === editingDataSourceId) ??
@@ -528,18 +554,26 @@ export default function IntegrationsPage() {
     setSubscriptionLimitMessage("");
   }, [isAgency, selectedClientId]);
 
-  const ensureDataSource = async (): Promise<IntegrationDataSource> => {
+  const ensureDataSource = async (
+    expectedSourceType?: string,
+  ): Promise<IntegrationDataSource> => {
     if (editingDataSourceId) {
       const existing = visibleDataSources.find(
         (ds) => ds.id === editingDataSourceId,
       );
       if (!existing) throw new Error("Data source not found");
+      if (
+        expectedSourceType &&
+        existing.source_type !== expectedSourceType
+      ) {
+        throw new Error(`A ${expectedSourceType} data source is required`);
+      }
       return existing;
     }
 
     const created = await createDataSource({
       client_id: isAgency ? form.client_id || undefined : undefined,
-      source_type: form.source_type,
+      source_type: expectedSourceType || form.source_type,
       external_id: form.external_id || undefined,
     }).unwrap();
 
@@ -570,6 +604,93 @@ export default function IntegrationsPage() {
     },
     [triggerGetCredentials],
   );
+
+  useEffect(() => {
+    const callback = readCallbackPayload(searchParams);
+    if (!callback) return;
+
+    const nextSearch = new URLSearchParams(searchParams);
+    FACEBOOK_OAUTH_QUERY_KEYS.forEach((key) => nextSearch.delete(key));
+    setSearchParams(nextSearch, { replace: true });
+
+    if (callback.error) {
+      setFeedback({ type: "error", message: callback.error });
+      return;
+    }
+
+    if (callback.selectionRequired) {
+      if (
+        !callback.credentialId ||
+        !callback.selectionToken ||
+        callback.adAccounts.length === 0
+      ) {
+        setFeedback({
+          type: "error",
+          message:
+            callback.message ||
+            "The Facebook ad-account selection is missing or has expired. Start the connection again.",
+        });
+        return;
+      }
+
+      setPendingCredentialId(callback.credentialId);
+      setPendingDataSourceId(callback.dataSourceId ?? null);
+      setPendingSelectionToken(callback.selectionToken);
+      setAdAccountOptions(callback.adAccounts);
+      setSelectedAdAccountId(
+        callback.adAccounts[0]?.normalized_account_id ||
+          callback.adAccounts[0]?.account_id ||
+          callback.adAccounts[0]?.id ||
+          "",
+      );
+      setFeedback({
+        type: "info",
+        message:
+          callback.message ||
+          "Multiple ad accounts detected. Please select one to complete the Meta integration.",
+      });
+      return;
+    }
+
+    if (callback.ok !== true) {
+      setFeedback({
+        type: "error",
+        message:
+          callback.message ||
+          "Facebook authorization did not complete. No credentials were saved.",
+      });
+      return;
+    }
+
+    setFeedback({
+      type: "success",
+      message:
+        callback.message ||
+        "Facebook OAuth completed successfully. Credentials refreshed.",
+    });
+
+    void (async () => {
+      await refetchDataSources();
+      if (!callback.dataSourceId) return;
+
+      const credential = await refreshCredentials(callback.dataSourceId);
+      if (
+        credential &&
+        (callback.marketingAdAccountId || callback.businessId)
+      ) {
+        setCredentialsByDataSource((current) => ({
+          ...current,
+          [callback.dataSourceId!]: {
+            ...credential,
+            marketing_ad_account_id:
+              callback.marketingAdAccountId ||
+              credential.marketing_ad_account_id,
+            business_id: callback.businessId || credential.business_id,
+          },
+        }));
+      }
+    })();
+  }, [searchParams, setSearchParams, refetchDataSources, refreshCredentials]);
 
   const validateForm = (): boolean => {
     if (isAgency && !form.client_id) {
@@ -640,18 +761,27 @@ export default function IntegrationsPage() {
       });
       return;
     }
+    if (facebookInitiationLock.current) return;
+    facebookInitiationLock.current = true;
 
     try {
-      const dataSource = await ensureDataSource();
-      const callbackUrl = `${window.location.origin}/integrations${
-        isAgency && form.client_id ? `?client=${form.client_id}` : ""
-      }`;
+      setFeedback(null);
+      setSubscriptionLimitMessage("");
+      const dataSource = await ensureDataSource("meta");
+      const callbackUrl = new URL("/integrations", window.location.origin);
+      const callbackClientId = form.client_id || selectedClientId;
+      if (isAgency && callbackClientId) {
+        callbackUrl.searchParams.set("client", callbackClientId);
+      }
 
       const response = await initiateFacebookOAuth({
         dataSourceId: dataSource.id,
-        frontend_callback_url: callbackUrl,
+        frontend_callback_url: callbackUrl.toString(),
       }).unwrap();
 
+      if (!normalizeValue(response.oauth_url)) {
+        throw new Error("Facebook OAuth URL was not returned by the server");
+      }
       window.location.assign(response.oauth_url);
     } catch (error: any) {
       console.error("Facebook OAuth initiation failed:", error);
@@ -664,10 +794,13 @@ export default function IntegrationsPage() {
       }
       setFeedback({
         type: "error",
-        message:
-          error?.data?.message ||
+        message: getApiErrorMessage(
+          error,
           "Failed to start Facebook connection. You can still use manual configuration below.",
+        ),
       });
+    } finally {
+      facebookInitiationLock.current = false;
     }
   };
 
@@ -677,7 +810,6 @@ export default function IntegrationsPage() {
     setPendingSelectionToken("");
     setAdAccountOptions([]);
     setSelectedAdAccountId("");
-    setFeedback(null);
   }, []);
 
   const handleAdAccountSubmit = async () => {
@@ -694,33 +826,187 @@ export default function IntegrationsPage() {
     }
 
     try {
-      await selectFacebookAdAccount({
+      const credential = await selectFacebookAdAccount({
         credentialId: pendingCredentialId,
         selection_token: pendingSelectionToken,
         selected_ad_account_id: selectedAdAccountId,
       }).unwrap();
 
       if (pendingDataSourceId) {
+        setCredentialsByDataSource((current) => ({
+          ...current,
+          [pendingDataSourceId]: credential,
+        }));
         await refreshCredentials(pendingDataSourceId);
       }
 
+      closeAdAccountDialog();
       setFeedback({
         type: "success",
         message:
           "Ad account selected and Meta integration completed successfully.",
       });
-      closeAdAccountDialog();
       await refetchDataSources();
     } catch (error: any) {
       console.error("Ad account selection failed:", error);
       setFeedback({
         type: "error",
-        message:
-          error?.data?.message ||
+        message: getApiErrorMessage(
+          error,
           "Failed to connect selected ad account. Please try again.",
+        ),
       });
     }
   };
+
+  if (pendingCredentialId) {
+    const pendingDataSource = pendingDataSourceId
+      ? visibleDataSources.find((item) => item.id === pendingDataSourceId)
+      : null;
+
+    return (
+      <Stack spacing={3}>
+        <Box>
+          <Typography variant="h4" sx={dashboardTitleSx}>
+            Select Meta Ad Account
+          </Typography>
+          <Typography color="text.secondary" sx={{ mt: 1 }}>
+            Facebook returned multiple accessible ad accounts. Choose the
+            account to save for this integration.
+          </Typography>
+        </Box>
+
+        {feedback && (
+          <Alert severity={feedback.type} sx={alertSx}>
+            {feedback.message}
+          </Alert>
+        )}
+
+        <Paper
+          component="form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleAdAccountSubmit();
+          }}
+          sx={{ overflow: "hidden", borderRadius: 3 }}
+        >
+          <Box sx={{ px: { xs: 2, md: 4 }, py: 3 }}>
+            <Typography variant="h5" fontWeight={700} gutterBottom>
+              Select Meta Ad Account
+            </Typography>
+            <Typography color="text.secondary">
+              Select one of the accounts available under your Facebook login.
+            </Typography>
+            <Typography sx={{ mt: 2 }}>
+              <strong>Data source:</strong>{" "}
+              {pendingDataSource?.external_id ||
+                `Meta integration #${pendingDataSourceId || ""}`}
+              {pendingDataSource?.source_type
+                ? ` - ${pendingDataSource.source_type}`
+                : ""}
+            </Typography>
+          </Box>
+
+          <Divider />
+
+          <Stack divider={<Divider flexItem />}>
+            {adAccountOptions.map((account) => {
+              const displayId =
+                account.normalized_account_id ||
+                account.account_id ||
+                account.id;
+              const rawId = account.account_id || account.id;
+              const selected = selectedAdAccountId === displayId;
+
+              return (
+                <Box
+                  component="label"
+                  key={displayId}
+                  sx={{
+                    display: "flex",
+                    gap: 1.5,
+                    px: { xs: 2, md: 4 },
+                    py: 2.5,
+                    cursor: isSelectingAdAccount ? "default" : "pointer",
+                    bgcolor: selected ? "action.selected" : "background.paper",
+                    transition: "background-color 120ms ease",
+                    "&:hover": {
+                      bgcolor: isSelectingAdAccount
+                        ? undefined
+                        : "action.hover",
+                    },
+                  }}
+                >
+                  <Radio
+                    checked={selected}
+                    value={displayId}
+                    onChange={(event) =>
+                      setSelectedAdAccountId(event.target.value)
+                    }
+                    disabled={isSelectingAdAccount}
+                    sx={{ alignSelf: "flex-start", mt: -0.75, ml: -1 }}
+                    inputProps={{ "aria-label": account.name || displayId }}
+                  />
+                  <Stack spacing={0.35}>
+                    <Typography fontWeight={700} color="text.primary">
+                      {account.name || "Unnamed account"}
+                    </Typography>
+                    <Typography variant="body2">
+                      Ad account ID: {displayId}
+                    </Typography>
+                    <Typography variant="body2">
+                      Raw account ID: {rawId}
+                    </Typography>
+                    {Boolean(account.business_names?.length) && (
+                      <Typography variant="body2">
+                        Business: {account.business_names?.join(", ")}
+                      </Typography>
+                    )}
+                    {Boolean(account.sources?.length) && (
+                      <Typography variant="body2">
+                        Found via: {account.sources?.join(", ")}
+                      </Typography>
+                    )}
+                  </Stack>
+                </Box>
+              );
+            })}
+          </Stack>
+
+          <Divider />
+
+          <Stack
+            direction={{ xs: "column-reverse", sm: "row" }}
+            spacing={1.5}
+            sx={{ px: { xs: 2, md: 4 }, py: 2.5 }}
+          >
+            <Button
+              variant="outlined"
+              onClick={() => {
+                closeAdAccountDialog();
+                setFeedback(null);
+              }}
+              disabled={isSelectingAdAccount}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={!selectedAdAccountId || isSelectingAdAccount}
+              startIcon={
+                isSelectingAdAccount && <CircularProgress size={18} />
+              }
+            >
+              {isSelectingAdAccount
+                ? "Saving Ad Account..."
+                : "Save Selected Ad Account"}
+            </Button>
+          </Stack>
+        </Paper>
+      </Stack>
+    );
+  }
 
   return (
     <Stack spacing={3}>
@@ -922,16 +1208,16 @@ export default function IntegrationsPage() {
                     variant="contained"
                     size="large"
                     startIcon={
-                      isInitiatingOAuth ? (
+                      isInitiatingOAuth || isCreatingDataSource ? (
                         <CircularProgress size={20} color="inherit" />
                       ) : (
                         <SyncAltIcon />
                       )
                     }
                     onClick={handleFacebookConnect}
-                    disabled={isInitiatingOAuth}
+                    disabled={isInitiatingOAuth || isCreatingDataSource}
                   >
-                    {isInitiatingOAuth
+                    {isInitiatingOAuth || isCreatingDataSource
                       ? "Redirecting to Meta..."
                       : "Connect with Facebook"}
                   </Button>
@@ -1194,57 +1480,6 @@ export default function IntegrationsPage() {
         </Stack>
       </Paper>
 
-      <Dialog
-        open={Boolean(pendingCredentialId)}
-        onClose={() => !isSelectingAdAccount && closeAdAccountDialog()}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Select Ad Account</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              Facebook returned multiple ad accounts. Choose the primary account
-              to associate with this integration.
-            </Typography>
-
-            <TextField
-              select
-              label="Facebook Ad Account"
-              value={selectedAdAccountId}
-              onChange={(e) => setSelectedAdAccountId(e.target.value)}
-              fullWidth
-              disabled={isSelectingAdAccount}
-            >
-              {adAccountOptions.map((acc) => {
-                const displayId =
-                  acc.normalized_account_id || acc.account_id || acc.id;
-                return (
-                  <MenuItem key={acc.id} value={displayId}>
-                    {acc.name || "Unnamed Account"} — {displayId}
-                  </MenuItem>
-                );
-              })}
-            </TextField>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={closeAdAccountDialog}
-            disabled={isSelectingAdAccount}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleAdAccountSubmit}
-            disabled={!selectedAdAccountId || isSelectingAdAccount}
-            startIcon={isSelectingAdAccount && <CircularProgress size={18} />}
-          >
-            Confirm & Connect
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Stack>
   );
 }

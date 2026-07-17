@@ -31,6 +31,9 @@ export type FacebookAdAccountOption = {
   name?: string;
   account_id?: string;
   normalized_account_id?: string;
+  sources?: string[];
+  business_ids?: string[];
+  business_names?: string[];
 };
 
 export const integrationApi = apiBase.injectEndpoints({
