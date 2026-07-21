@@ -44,7 +44,7 @@ export default function CampaignTable({ rows, loading }: Props) {
     { field: 'clicks', headerName: 'Clicks', flex: 1 },
     { field: 'initiated', headerName: 'Initiated', flex: 1 },
     { field: 'purchases', headerName: 'Purchases', flex: 1 },
-    { field: 'revenue', headerName: 'Revenue (LKR)', flex: 1 },
+    { field: 'revenue', headerName: 'Revenue', flex: 1 },
     { field: 'conversion_rate', headerName: 'Conv. Rate (%)', flex: 1 }
   ];
 

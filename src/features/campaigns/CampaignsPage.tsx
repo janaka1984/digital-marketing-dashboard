@@ -42,12 +42,13 @@ import { dashboardTitleSx } from "@theme/index";
 type CampaignLevel = "campaign" | "adset" | "ad";
 type DrawerTab = "overview" | "adsets" | "ads";
 
-type CampaignRow = {
+export type CampaignRow = {
   id: string | number;
   raw: Record<string, any>;
   name: string;
   source: string;
   status: string;
+  currency: string;
   pageviews: number;
   impressions: number;
   reach: number;
@@ -139,12 +140,10 @@ const numberWithFallback = (value: unknown, fallback: number) =>
     ? fallback
     : numberValue(value);
 
-const budgetValue = (value: unknown) => numberValue(value) / 10;
-
 const budgetWithFallback = (value: unknown, fallback: number) =>
   value === undefined || value === null || value === ""
     ? fallback
-    : budgetValue(value);
+    : numberValue(value);
 
 const hasValue = (value: unknown) =>
   value !== undefined && value !== null && value !== "";
@@ -260,7 +259,7 @@ const latestDateKeys = [
   ...endDateKeys,
 ];
 
-const normalizeRow = (
+export const normalizeRow = (
   row: Record<string, any>,
   index: number,
   level: CampaignLevel,
@@ -355,6 +354,7 @@ const normalizeRow = (
       ),
     ),
     status: String(pick(row, ["status"], "-")),
+    currency: String(pick(row, ["currency"], "")),
     pageviews: numberValue(row.pageviews),
     impressions: numberValue(row.impressions),
     reach: numberValue(row.reach),
@@ -367,12 +367,12 @@ const normalizeRow = (
     revenue: numberValue(row.revenue),
     roas: numberValue(row.roas),
     conversion_rate: numberValue(row.conversion_rate),
-    daily_budget: budgetValue(row.daily_budget),
-    lifetime_budget: budgetValue(row.lifetime_budget),
-    allocated_budget: budgetValue(allocatedBudgetRaw),
+    daily_budget: numberValue(row.daily_budget),
+    lifetime_budget: numberValue(row.lifetime_budget),
+    allocated_budget: numberValue(allocatedBudgetRaw),
     budget_type: String(pick(row, ["budget_type"], "")),
     recommended_budget: hasValue(recommendedBudgetRaw)
-      ? budgetValue(recommendedBudgetRaw)
+      ? numberValue(recommendedBudgetRaw)
       : 0,
     has_recommended_budget: hasValue(recommendedBudgetRaw),
     recommendation_action: String(optimizerAction || ""),
@@ -398,6 +398,7 @@ const rowIdentity = (row: CampaignRow, level: CampaignLevel) => {
 const metricSignature = (row: CampaignRow) =>
   [
     row.pageviews,
+    row.currency,
     row.impressions,
     row.reach,
     row.clicks,
@@ -471,6 +472,8 @@ const mergeRowsByLevel = (rows: CampaignRow[], level: CampaignLevel) => {
       existing.lifetime_budget =
         row.lifetime_budget || existing.lifetime_budget;
       existing.budget_type = row.budget_type || existing.budget_type;
+      existing.currency = row.currency || existing.currency;
+      existing.cpc = row.cpc || existing.cpc;
     }
     if (
       row.has_recommended_budget &&
@@ -494,7 +497,6 @@ const mergeRowsByLevel = (rows: CampaignRow[], level: CampaignLevel) => {
     existing.ctr = existing.impressions
       ? (existing.clicks / existing.impressions) * 100
       : 0;
-    existing.cpc = existing.clicks ? existing.spend / existing.clicks : 0;
     existing.conversion_rate = existing.pageviews
       ? (existing.purchases / existing.pageviews) * 100
       : 0;
@@ -595,10 +597,10 @@ const applyAiRecommendations = (
     return {
       ...row,
       allocated_budget: hasValue(currentBudget)
-        ? budgetValue(currentBudget)
+        ? numberValue(currentBudget)
         : row.allocated_budget,
       recommended_budget: hasValue(recommendedBudget)
-        ? budgetValue(recommendedBudget)
+        ? numberValue(recommendedBudget)
         : row.recommended_budget,
       has_recommended_budget: hasValue(recommendedBudget),
       recommendation_action: action,
@@ -646,6 +648,9 @@ const totalRow = (
   );
 
   const resolvedTotals = {
+    currency: String(
+      backendTotals?.currency || rows.find((row) => row.currency)?.currency || "",
+    ),
     pageviews: numberWithFallback(backendTotals?.pageviews, totals.pageviews),
     impressions: numberWithFallback(
       backendTotals?.impressions,
@@ -681,9 +686,7 @@ const totalRow = (
     ctr: resolvedTotals.impressions
       ? (resolvedTotals.clicks / resolvedTotals.impressions) * 100
       : 0,
-    cpc: resolvedTotals.clicks
-      ? resolvedTotals.spend / resolvedTotals.clicks
-      : 0,
+    cpc: numberValue(backendTotals?.cpc),
     roas: numberValue(backendTotals?.roas),
     conversion_rate: resolvedTotals.pageviews
       ? (resolvedTotals.purchases / resolvedTotals.pageviews) * 100
@@ -714,13 +717,11 @@ const totalRow = (
 };
 
 const formatNumber = (value: number) => Math.round(value || 0).toLocaleString();
-const formatMoney = (value: number) =>
-  (value || 0).toLocaleString(undefined, {
+export const formatMoney = (value: number, currency?: string) =>
+  new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "LKR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+    currency: currency || "USD",
+  }).format(value ?? 0);
 const formatPercent = (value: number) => `${(value || 0).toFixed(2)}%`;
 const formatDecimal = (value: number) => (value || 0).toFixed(2);
 const formatRoas = (value: number) => `${formatDecimal(value)}x`;
@@ -957,15 +958,17 @@ function DenseMetricTable({
                   <TableCell sx={tableCellSx}>
                     {formatPercent(row.ctr)}
                   </TableCell>
-                  <TableCell sx={tableCellSx}>{formatMoney(row.cpc)}</TableCell>
                   <TableCell sx={tableCellSx}>
-                    {formatMoney(row.spend)}
+                    {formatMoney(row.cpc, row.currency)}
+                  </TableCell>
+                  <TableCell sx={tableCellSx}>
+                    {formatMoney(row.spend, row.currency)}
                   </TableCell>
                   <TableCell sx={tableCellSx}>
                     {formatNumber(row.purchases)}
                   </TableCell>
                   <TableCell sx={tableCellSx}>
-                    {formatMoney(row.revenue)}
+                    {formatMoney(row.revenue, row.currency)}
                   </TableCell>
                   <TableCell sx={tableCellSx}>{formatRoas(row.roas)}</TableCell>
                 </TableRow>
@@ -1200,13 +1203,15 @@ export default function CampaignsPage() {
       field: "cpc",
       headerName: "CPC",
       width: 85,
-      valueFormatter: (value) => formatMoney(numberValue(value)),
+      valueFormatter: (value, row) =>
+        formatMoney(numberValue(value), row.currency || mainTotals.currency),
     },
     {
       field: "allocated_budget",
       headerName: "Budget",
       width: 125,
-      valueFormatter: (value) => formatMoney(numberValue(value)),
+      valueFormatter: (value, row) =>
+        formatMoney(numberValue(value), row.currency || mainTotals.currency),
     },
     {
       field: "recommended_budget",
@@ -1214,8 +1219,10 @@ export default function CampaignsPage() {
       width: 125,
       valueGetter: (_value, row) =>
         row.has_recommended_budget ? row.recommended_budget : null,
-      valueFormatter: (value) =>
-        hasValue(value) ? formatMoney(numberValue(value)) : "-",
+      valueFormatter: (value, row) =>
+        hasValue(value)
+          ? formatMoney(numberValue(value), row.currency || mainTotals.currency)
+          : "-",
     },
     {
       field: "recommendation_action",
@@ -1241,7 +1248,8 @@ export default function CampaignsPage() {
       field: "spend",
       headerName: "Spend",
       width: 125,
-      valueFormatter: (value) => formatMoney(numberValue(value)),
+      valueFormatter: (value, row) =>
+        formatMoney(numberValue(value), row.currency || mainTotals.currency),
     },
     {
       field: "initiated",
@@ -1259,7 +1267,8 @@ export default function CampaignsPage() {
       field: "revenue",
       headerName: "Revenue",
       width: 125,
-      valueFormatter: (value) => formatMoney(numberValue(value)),
+      valueFormatter: (value, row) =>
+        formatMoney(numberValue(value), row.currency || mainTotals.currency),
     },
     {
       field: "roas",
@@ -1567,12 +1576,18 @@ export default function CampaignsPage() {
               ["Impressions", formatNumber(mainTotals.impressions)],
               ["Reach", formatNumber(mainTotals.reach)],
               ["Clicks", formatNumber(mainTotals.clicks)],
-              ["Allocated Budget", formatMoney(mainTotals.allocated_budget)],
-              ["Spend", formatMoney(mainTotals.spend)],
-              ["Revenue", formatMoney(mainTotals.revenue)],
+              [
+                "Allocated Budget",
+                formatMoney(mainTotals.allocated_budget, mainTotals.currency),
+              ],
+              ["Spend", formatMoney(mainTotals.spend, mainTotals.currency)],
+              ["Revenue", formatMoney(mainTotals.revenue, mainTotals.currency)],
               [
                 "Recommended Budget",
-                formatMoney(mainTotals.recommended_budget),
+                formatMoney(
+                  mainTotals.recommended_budget,
+                  mainTotals.currency,
+                ),
               ],
               ["ROAS", formatRoas(mainTotals.roas)],
               [
@@ -1714,7 +1729,10 @@ export default function CampaignsPage() {
                 >
                   <MetricCard
                     label="Spend"
-                    value={formatMoney(selectedCampaign.spend)}
+                    value={formatMoney(
+                      selectedCampaign.spend,
+                      selectedCampaign.currency || mainTotals.currency,
+                    )}
                   />
                   <MetricCard
                     label="Clicks"
@@ -1734,7 +1752,10 @@ export default function CampaignsPage() {
                   />
                   <MetricCard
                     label="Revenue"
-                    value={formatMoney(selectedCampaign.revenue)}
+                    value={formatMoney(
+                      selectedCampaign.revenue,
+                      selectedCampaign.currency || mainTotals.currency,
+                    )}
                   />
                   <MetricCard
                     label="ROAS"
@@ -1779,7 +1800,10 @@ export default function CampaignsPage() {
             >
               <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
                 <Typography variant="caption">
-                  Spend: <strong>{formatMoney(drawerTotals.spend)}</strong>
+                  Spend:{" "}
+                  <strong>
+                    {formatMoney(drawerTotals.spend, drawerTotals.currency)}
+                  </strong>
                 </Typography>
                 <Typography variant="caption">
                   Clicks: <strong>{formatNumber(drawerTotals.clicks)}</strong>

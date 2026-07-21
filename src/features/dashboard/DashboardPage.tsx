@@ -111,7 +111,7 @@ export default function DashboardPage() {
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
-            title="Revenue (LKR)"
+            title="Revenue"
             icon={MonetizationOnIcon}
             color="#FF6F00"
             value={overview?.revenue ?? 0}
